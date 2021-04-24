@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2010-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,8 @@ enum
  I_B1, I_B2, I_B3, I_B4, I_B5, I_B6, I_B7, I_B8, I_J1
 };
 
-cpart_pbuttons_an::cpart_pbuttons_an(unsigned x, unsigned y)
+cpart_pbuttons_an::cpart_pbuttons_an(unsigned x, unsigned y):
+font (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
@@ -48,10 +49,10 @@ cpart_pbuttons_an::cpart_pbuttons_an(unsigned x, unsigned y)
 
  ReadMaps ();
 
- lxImage image;
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ lxImage image(&Window5);
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
 
  canvas.Create (Window5.GetWWidget (), Bitmap);
@@ -140,9 +141,8 @@ cpart_pbuttons_an::Draw(void)
  int i;
  lxString temp;
  float ftemp;
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -152,7 +152,7 @@ cpart_pbuttons_an::Draw(void)
     {
     case O_P1:
      canvas.SetColor (49, 61, 99);
-     canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1 + 12);
+     canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1 + 10);
      canvas.SetFgColor (255, 255, 255);
      if (active)
       ftemp = (5.0 * (output[i].id - O_P1)) / 8.0;
@@ -192,7 +192,7 @@ cpart_pbuttons_an::Draw(void)
     case O_B7:
     case O_B8:
      canvas.SetColor (100, 100, 100);
-     canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
+     canvas.Circle (1, output[i].cx, output[i].cy, 10);
      if (output_value_[output[i].id - O_B1] == active)
       {
        canvas.SetColor (55, 55, 55);
@@ -201,7 +201,7 @@ cpart_pbuttons_an::Draw(void)
       {
        canvas.SetColor (15, 15, 15);
       }
-     canvas.Circle (1, output[i].cx, output[i].cy, 10);
+     canvas.Circle (1, output[i].cx, output[i].cy, 8);
      break;
     }
   }
@@ -449,5 +449,5 @@ cpart_pbuttons_an::ReadPropertiesWindow(CPWindow * WProp)
 
 }
 
-part_init("Push buttons (Analogic)", cpart_pbuttons_an);
+part_init("Push buttons (Analogic)", cpart_pbuttons_an, "Input");
 

@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -67,19 +67,20 @@ const char pin_values[10][10] = {
  */
 
 
-cpart_vterm::cpart_vterm(unsigned x, unsigned y)
+cpart_vterm::cpart_vterm(unsigned x, unsigned y):
+font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image;
+ lxImage image(&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
  canvas.Create (Window5.GetWWidget (), Bitmap);
 
@@ -256,9 +257,8 @@ cpart_vterm::Draw(void)
 
  //const picpin * ppins = Window5.GetPinsValues ();
 
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -414,7 +414,7 @@ cpart_vterm::ReadPropertiesWindow(CPWindow * WProp)
 void
 cpart_vterm::PreProcess(void)
 {
- vterm_set_clk_freq (&vt, Window1.GetBoard ()->MGetInstClock ());
+ vterm_set_clk_freq (&vt, Window1.GetBoard ()->MGetInstClockFreq ());
 
  if (send_text)
   {
@@ -498,5 +498,5 @@ cpart_vterm::EvMouseButtonPress(uint button, uint x, uint y, uint state)
 void
 cpart_vterm::PostProcess(void) { }
 
-part_init("IO Virtual term", cpart_vterm);
+part_init("IO Virtual term", cpart_vterm, "Virtual");
 

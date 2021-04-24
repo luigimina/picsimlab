@@ -2,7 +2,7 @@ include ../../VERSION
 
 CC = g++
 
-prefix=/usr
+prefix=$(DESTDIR)/usr
 
 RM= rm -f
 CP= cp
@@ -26,16 +26,21 @@ OBJS = psrtank.o srtank1.o srtank2.o  serial.o
 exp: all
 
 all: $(OBJS)
-	$(CC) $(FLAGS) $(OBJS) -osrtank $(LIBS)
+	@echo "Linking srtank"
+	@$(CC) $(FLAGS) $(OBJS) -osrtank $(LIBS)
 
 %.o: %.cc
-	$(CC) -c $(FLAGS) $< 
+	@echo "Compiling $<"
+	@$(CC) -c $(FLAGS) $< 
 
 run: all
 	./srtank
 
 install: all
 	$(CP) -dvf  ../../share/srtank.desktop ${appdir} 
+	$(CP) -dvf srtank ${execdir}
+
+install_app: all
 	$(CP) -dvf srtank ${execdir}
 
 uninstall:

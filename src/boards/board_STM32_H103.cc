@@ -281,11 +281,11 @@ cboard_STM32_H103::EvMouseButtonRelease(uint button, uint x, uint y, uint state)
 //This is the critical code for simulator running speed
 
 void
-cboard_STM32_H103::Draw(CDraw *draw, double scale)
+cboard_STM32_H103::Draw(CDraw *draw)
 {
  int i;
 
- draw->Canvas.Init (scale, scale); //initialize draw context
+ draw->Canvas.Init (Scale, Scale); //initialize draw context
 
  //board_x draw 
  for (i = 0; i < outputc; i++) //run over all outputs
@@ -303,7 +303,7 @@ cboard_STM32_H103::Draw(CDraw *draw, double scale)
 
        break;
       case O_LPWR: //Blue using mcupwr value
-       draw->Canvas.SetColor (225 * Window1.Get_mcupwr () + 30, 0, 0);
+       draw->Canvas.SetColor (200 * Window1.Get_mcupwr () + 55, 0, 0);
        draw->Canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
 
        break;
@@ -352,9 +352,10 @@ cboard_STM32_H103::Run_CPU(void)
  int j;
  unsigned char pi;
  unsigned int alm[64];
+ int pinc = MGetPinCount ();
 
  int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- long int NSTEPJ = Window1.GetNSTEPJ (); //number of steps in 100ms
+ long int NSTEP = Window1.GetNSTEP () / pinc; //number of steps in 100ms
 
 
  //reset pins mean value
@@ -382,9 +383,8 @@ cboard_STM32_H103::Run_CPU(void)
     //Spare parts window process
     if (use_spare)Window5.Process ();
 
-    //increment mean value counter if pin is high 
-    if (j < MGetPinCount ())
-     alm[j] += pins[j].value;
+    //increment mean value counter if pin is high
+    alm[i % pinc] += pins[i % pinc].value;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
@@ -397,7 +397,7 @@ cboard_STM32_H103::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < MGetPinCount (); pi++)
   {
-   pins[pi].oavalue = (int) (((225.0 * alm[pi]) / NSTEPJ) + 30);
+   pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
   }
 
  //Spare parts window pre post process

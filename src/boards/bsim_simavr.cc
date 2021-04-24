@@ -72,10 +72,7 @@ bsim_simavr::bsim_simavr(void)
 }
 
 void
-bsim_simavr::MSetSerial(const char * port)
-{
-
-}
+bsim_simavr::MSetSerial(const char * port) { }
 
 enum
 {
@@ -110,8 +107,23 @@ bsim_simavr::pins_reset(void)
   }
 
  //VCC pins
- pins[6].value = 1;
- pins[19].value = 1;
+ if (lxString (avr->mmcu).compare (lxT ("atmega2560")) == 0)
+  {
+   pins[9].value = 1;
+   pins[30].value = 1;
+   pins[60].value = 1;
+   pins[79].value = 1;
+   pins[99].value = 1;
+  }
+ else if (lxString (avr->mmcu).compare (lxT ("attiny85")) == 0)
+  {
+   pins[7].value = 1;
+  }
+ else//atmega328p
+  {
+   pins[6].value = 1;
+   pins[19].value = 1;
+  }
 }
 
 void
@@ -152,16 +164,21 @@ bsim_simavr::MInit(const char * processor, const char * fname, float freq)
   {
    avr->reset_pc = 0x3E000;
   }
- else
+ else if ((lxString (avr->mmcu).compare (lxT ("atmega328p")) == 0))
   {
    avr->reset_pc = 0x07000; // bootloader 0x3800
   }
+ else
+  {
+   avr->reset_pc = 0x0000;
+  }
+
  avr->avcc = 5000;
 
  //avr->log= LOG_DEBUG;
 
  avr_reset (avr);
- avr->data[UCSR0B]=0x00; //FIX the simavr reset TX enabled
+ avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
  pins_reset ();
 
  /*
@@ -319,7 +336,7 @@ bsim_simavr::MGetFreq(void)
 }
 
 float
-bsim_simavr::MGetInstClock(void)
+bsim_simavr::MGetInstClockFreq(void)
 {
  return avr->frequency;
 }
@@ -438,6 +455,7 @@ bsim_simavr::MGetPinCount(void)
  if (lxString (avr->mmcu).compare (lxT ("atmega328")) == 0)return 28;
  if (lxString (avr->mmcu).compare (lxT ("atmega328p")) == 0)return 28;
  if (lxString (avr->mmcu).compare (lxT ("atmega2560")) == 0)return 100;
+ if (lxString (avr->mmcu).compare (lxT ("attiny85")) == 0)return 8;
  return 0;
 }
 
@@ -752,6 +770,36 @@ bsim_simavr::MGetPinName(int pin)
      break;
     }
   }
+ else if (lxString (avr->mmcu).compare (lxT ("attiny85")) == 0)
+  {
+   switch (pin)
+    {
+    case 1:
+     return "PB5/4";
+     break;
+    case 2:
+     return "PB3/3";
+     break;
+    case 3:
+     return "PB4/5";
+     break;
+    case 4:
+     return "GND";
+     break;
+    case 5:
+     return "PB0/0";
+     break;
+    case 6:
+     return "PB1/1";
+     break;
+    case 7:
+     return "PB2/2";
+     break;
+    case 8:
+     return "+5V";
+     break;
+    }
+  }
  else
   {
    switch (pin)
@@ -1009,39 +1057,36 @@ uart_in_hook(struct avr_irq_t * irq, uint32_t value, void * param)
  ((bsim_simavr *) param)->SerialSend (value);
 }
 
-int cont = 0;
-int aux = 1;
-
 void
 bsim_simavr::UpdateHardware(void)
 {
-
+ static int cont = 0;
+ static int aux = 1;
  unsigned char c;
  cont++;
 
- if (avr->data[UCSR0B] & 0x10)//RXEN
+ if (cont > 1000)
   {
-   if (cont > 1000)
+   cont = 0;
+
+   if (serial_port_get_dsr (serialfd))
     {
-     cont = 0;
+     if (aux)
+      {
+       MReset (0);
+       aux = 0;
+      }
+    }
+   else
+    {
+     aux = 1;
+    }
+
+   if (avr->data[UCSR0B] & 0x10)//RXEN
+    {
      if (serial_port_rec (serialfd, &c))
       {
        avr_raise_irq (serial_irq + IRQ_UART_BYTE_OUT, c);
-      }
-
-     if (serial_port_get_dsr (serialfd))
-      {
-       if (aux)
-        {
-         avr_reset (avr);
-         avr->data[UCSR0B]=0x00; //FIX the simavr reset TX enabled
-         pins_reset ();
-         aux = 0;
-        }
-      }
-     else
-      {
-       aux = 1;
       }
 
      if (bitbang_uart_data_available (&bb_uart))
@@ -1110,7 +1155,7 @@ void
 bsim_simavr::MReset(int flags)
 {
  avr_reset (avr);
- avr->data[UCSR0B]=0x00; //FIX the simavr reset TX enabled
+ avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
  bitbang_uart_rst (&bb_uart);
 }
 

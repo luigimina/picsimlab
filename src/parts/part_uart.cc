@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -61,19 +61,20 @@ const char pin_values[10][10] = {
  */
 
 
-cpart_UART::cpart_UART(unsigned x, unsigned y)
+cpart_UART::cpart_UART(unsigned x, unsigned y):
+font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image;
+ lxImage image(&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
  canvas.Create (Window5.GetWWidget (), Bitmap);
 
@@ -112,9 +113,8 @@ cpart_UART::Draw(void)
 
  //const picpin * ppins = Window5.GetPinsValues ();
 
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -285,7 +285,7 @@ cpart_UART::ReadPropertiesWindow(CPWindow * WProp)
 void
 cpart_UART::PreProcess(void)
 {
- uart_set_clk_freq (&sr, Window1.GetBoard ()->MGetInstClock ());
+ uart_set_clk_freq (&sr, Window1.GetBoard ()->MGetInstClockFreq ());
 }
 
 void
@@ -337,5 +337,5 @@ cpart_UART::EvMouseButtonPress(uint button, uint x, uint y, uint state)
 void
 cpart_UART::PostProcess(void) { }
 
-part_init("IO UART", cpart_UART);
+part_init("IO UART", cpart_UART, "Other");
 

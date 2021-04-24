@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -69,19 +69,20 @@ const char pin_values[10][10] = {
  */
 
 
-cpart_ETH_w5500::cpart_ETH_w5500(unsigned x, unsigned y)
+cpart_ETH_w5500::cpart_ETH_w5500(unsigned x, unsigned y):
+font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image;
+ lxImage image(&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
 
- Bitmap = lxGetBitmapRotated(&image, &Window5, orientation); 
+ Bitmap = new lxBitmap(&image, &Window5); 
  image.Destroy ();
  canvas.Create (Window5.GetWWidget (), Bitmap);
 
@@ -123,9 +124,8 @@ cpart_ETH_w5500::Draw(void)
  int n;
  char status[10];
  char sport[10];
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -499,5 +499,5 @@ cpart_ETH_w5500::EvMouseButtonPress(uint button, uint x, uint y, uint state)
 void
 cpart_ETH_w5500::PostProcess(void) { }
 
-part_init("ETH w5500", cpart_ETH_w5500);
+part_init("ETH w5500", cpart_ETH_w5500, "Other");
 

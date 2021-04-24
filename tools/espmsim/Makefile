@@ -2,7 +2,7 @@ include ../../VERSION
 
 CC = g++
 
-prefix=/usr
+prefix=$(DESTDIR)/usr
 
 RM= rm -f
 CP= cp
@@ -25,16 +25,21 @@ OBJS = pespmsim.o espmsim1.o espmsim2.o serial.o tcp.o
 
 exp: all
 all: $(OBJS)
-	$(CC) $(FLAGS) $(OBJS) -oespmsim $(LIBS)
+	@echo "Linking espmsim"
+	@$(CC) $(FLAGS) $(OBJS) -oespmsim $(LIBS)
 
 %.o: %.cc
-	$(CC) -c $(FLAGS) $< 
+	@echo "Compiling $<"
+	@$(CC) -c $(FLAGS) $< 
 
 run: all
 	./espmsim
 
 install: all
 	$(CP) -dvf  ../../share/espmsim.desktop ${appdir} 
+	$(CP) -dvf espmsim ${execdir}
+
+install_app: all
 	$(CP) -dvf espmsim ${execdir}
 
 uninstall:

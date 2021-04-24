@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2019-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2019-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ public:
     void PostProcess(void);
 
     lxString GetPictureFileName(void) {
-        return lxT("jumpers/jumper.png");
+        return lxT("jumpers/jumper.svg");
     };
 
     lxString GetInputMapFile(void) {
@@ -84,6 +84,7 @@ private:
     int JUMPSTEPS_;
     lxString jname;
     unsigned char type; 
+    lxFont font;
 };
 
 // input/output   0-M 1-F

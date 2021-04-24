@@ -81,10 +81,6 @@ usleep(unsigned int usec)
 static lxString cvt_fname;
 #endif
 
-#ifndef _NOTHREAD
-static int crt;
-#endif
-
 void
 CPWindow1::timer1_EvOnTime(CControl * control)
 {
@@ -100,30 +96,91 @@ CPWindow1::timer1_EvOnTime(CControl * control)
    label1.SetColor (255, 0, 0);
   }
 #else   
- if (!ondraw)
+ if (!tgo)
   {
-   if (!crt)
-    label1.SetColor (0, 0, 0);
+   if (crt)
+    {
+     label1.SetColor (0, 0, 0);
+     label1.Draw ();
+    }
    crt = 0;
   }
  else
   {
-   label1.SetColor (255, 0, 0);
+   if (!crt)
+    {
+     label1.SetColor (255, 0, 0);
+     label1.Draw ();
+    }
    crt = 1;
   }
 #endif
- pboard->Draw (&draw1, scale);
- label1.Draw ();
- ondraw = 1;
-
- status.st[0] &= ~ST_T1;
 
  if (!tgo)
   {
    tgo = 1; //thread sync
   }
 
+
+ if (need_resize == 1)
+  {
+   double scalex, scaley, scale_temp;
+
+   scalex = ((Window1.GetWidth () - 185)*1.0) / plWidth;
+   scaley = ((Window1.GetHeight () - 90)*1.0) / plHeight;
+
+
+   if (scalex < 0.1)scalex = 0.1;
+   if (scaley < 0.1)scaley = 0.1;
+   if (scalex > 4)scalex = 4;
+   if (scaley > 4)scaley = 4;
+
+   if (scalex < scaley)
+    scale_temp = scalex;
+   else
+    scale_temp = scaley;
+
+   if (scale != scale_temp)
+    {
+     scale = scale_temp;
+
+     int nw = (plWidth * scale);
+     if (nw == 0)nw = 1;
+     int nh = (plHeight * scale);
+     if (nh == 0)nh = 1;
+
+     scale = ((double) nw) / plWidth;
+
+     draw1.SetWidth (nw);
+     draw1.SetHeight (nh);
+
+     draw1.SetImgFileName (share + lxT ("boards/") + pboard->GetPictureFileName (), scale, scale);
+    }
+
+   pboard->SetScale (scale);
+   pboard->EvOnShow ();
+
+   if (osc_on)
+    {
+     menu1_Modules_Oscilloscope_EvMenuActive (this);
+     osc_on = 0;
+    }
+   if (spare_on)
+    {
+     menu1_Modules_Spareparts_EvMenuActive (this);
+     spare_on = 0;
+    }
+  }
+
+ need_resize++;
+
+ pboard->Draw (&draw1);
+
+#ifndef __EMSCRIPTEN__
  rcontrol_loop ();
+#endif 
+
+ status.st[0] &= ~ST_T1;
 }
 
 void
@@ -136,10 +193,9 @@ CPWindow1::thread1_EvThreadRun(CControl*)
    if (tgo)
     {
      status.st[1] |= ST_TH;
-     tgo = 0;
      pboard->Run_CPU ();
      if (debug)pboard->DebugLoop ();
-     ondraw = 0;
+     tgo = 0;
      status.st[1] &= ~ST_TH;
     }
    else
@@ -245,25 +301,22 @@ CPWindow1::_EvOnCreate(CControl * control)
  char home[1024];
  lxFileName fn;
  lxFileName fn_spare;
+ int use_default_board = 0;
 
- strncpy (home, (char*) lxGetUserDataDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (home, (char*) lxGetUserDataDir (lxT ("picsimlab")).char_str (), 1023);
 
 
  if (!create)
   {
    PATH = lxGetCwd ();
 
-#ifndef _WIN_
-   share = lxString (_SHARE_);
-#else
    share = dirname (lxGetExecutablePath ()) + lxT ("/") + lxString (_SHARE_);
-#endif
-
 
    if (Application->Aargc == 2)
     {
      fn.Assign (Application->Aargv[1]);
      fn.MakeAbsolute ();
+     use_default_board = 1;
     }
    else if ((Application->Aargc >= 3) && (Application->Aargc <= 5))
     {
@@ -316,7 +369,7 @@ CPWindow1::_EvOnCreate(CControl * control)
   }
 
  //load options
- Configure (control, home);
+ Configure (control, home, use_default_board);
 
  if (!create)
   {
@@ -345,12 +398,13 @@ CPWindow1::_EvOnCreate(CControl * control)
     }
   }
  create++;
-
+#ifndef __EMSCRIPTEN__
  rcontrol_init (remotec_port);
+#endif 
 }
 
 void
-CPWindow1::Configure(CControl * control, const char * home)
+CPWindow1::Configure(CControl * control, const char * home, int use_default_board)
 {
 
  char line[1024];
@@ -405,19 +459,34 @@ CPWindow1::Configure(CControl * control, const char * home)
 
        if (!strcmp (name, "picsimlab_lab"))
         {
-         for (i = 0; i < BOARDS_LAST; i++)
+         if (use_default_board)
           {
-           if (!strcmp (boards_list[i].name_, value))
-            {
-             break;
-            }
+           lab = 0;
+           lab_ = 0;
           }
-
-         lab = i;
-         lab_ = i;
+         else
+          {
+           for (i = 0; i < BOARDS_LAST; i++)
+            {
+             if (!strcmp (boards_list[i].name_, value))
+              {
+               break;
+              }
+            }
+           lab = i;
+           lab_ = i;
+          }
 
          pboard = create_board (&lab, &lab_);
          pboard->SetName (boards_list[lab].name);
+         if (pboard->GetScale () < scale)
+          {
+           scale = pboard->GetScale ();
+          }
+         else
+          {
+           pboard->SetScale (scale);
+          }
          SetClock (2.0); //Default clock
 
         }
@@ -437,7 +506,7 @@ CPWindow1::Configure(CControl * control, const char * home)
         {
          sscanf (value, "%hu", &remotec_port);
         }
-       
+
        if (!strcmp (name, "picsimlab_debugp"))
         {
          sscanf (value, "%hu", &debug_port);
@@ -461,6 +530,18 @@ CPWindow1::Configure(CControl * control, const char * home)
          SetY (j);
         }
 
+       if (!strcmp (name, "picsimlab_scale"))
+        {
+         if (!create)
+          {
+           sscanf (value, "%lf", &scale);
+           draw1.SetWidth (plWidth * scale);
+           SetWidth (185 + plWidth * scale);
+           draw1.SetHeight (plHeight * scale);
+           SetHeight (90 + plHeight * scale);
+           pboard->SetScale (scale);
+          }
+        }
 
        if (!strcmp (name, "picsimlab_lpath"))
         {
@@ -672,9 +753,9 @@ CPWindow1::_EvOnDestroy(CControl * control)
 
  Window4.Hide ();
  Window5.Hide ();
-
+#ifndef __EMSCRIPTEN__
  rcontrol_end ();
-
+#endif
  timer1.SetRunState (0);
  timer2.SetRunState (0);
  msleep (100);
@@ -688,7 +769,7 @@ CPWindow1::_EvOnDestroy(CControl * control)
 
 
  //write options
- strcpy (home, (char*) lxGetUserDataDir (_T ("picsimlab")).char_str ());
+ strcpy (home, (char*) lxGetUserDataDir (lxT ("picsimlab")).char_str ());
 
  lxCreateDir (home);
 
@@ -702,6 +783,7 @@ CPWindow1::_EvOnDestroy(CControl * control)
  saveprefs (lxT ("picsimlab_debugp"), itoa (debug_port));
  saveprefs (lxT ("picsimlab_remotecp"), itoa (remotec_port));
  saveprefs (lxT ("picsimlab_position"), itoa (GetX ()) + lxT (",") + itoa (GetY ()));
+ saveprefs (lxT ("picsimlab_scale"), ftoa (scale));
  saveprefs (lxT ("osc_on"), itoa (pboard->GetUseOscilloscope ()));
  saveprefs (lxT ("spare_on"), itoa (pboard->GetUseSpareParts ()));
 #ifndef _WIN_
@@ -757,6 +839,7 @@ CPWindow1::_EvOnDestroy(CControl * control)
  GetX ();
  GetY ();
 
+ scale = 1.0;
 }
 
 void
@@ -843,7 +926,7 @@ CPWindow1::menu1_Help_Contents_EvMenuActive(CControl * control)
 {
 #ifdef EXT_BROWSER
  //lxLaunchDefaultBrowser(lxT("file://")+share + lxT ("docs/picsimlab.html"));
- lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab/"));
+ lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_docs/"));
 #else 
  Window2.html1.SetLoadFile (share + lxT ("docs/picsimlab.html"));
  Window2.Show ();
@@ -855,7 +938,7 @@ CPWindow1::menu1_Help_Board_EvMenuActive(CControl * control)
 {
  lxString bname = lxString (boards_list[lab].name_).substr (0, 12);
 
- lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab/Features_Board_") + bname + lxT (".html"));
+ lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_docs/Features_Board_") + bname + lxT (".html"));
 }
 
 void
@@ -895,50 +978,7 @@ CPWindow1::menu1_Help_Examples_EvMenuActive(CControl * control)
 void
 CPWindow1::_EvOnShow(CControl * control)
 {
- double scalex, scaley;
-
- if (timer1.GetRunState ())
-  {
-   scalex = ((Window1.GetWidth () - 185)*1.0) / plWidth;
-#ifdef _WIN_
-   scaley = ((Window1.GetHeight () - 75)*1.0) / plHeight;
-#else
-   scaley = ((Window1.GetHeight () - 90)*1.0) / plHeight;
-#endif
-
-   if (scalex < 0.1)scalex = 0.1;
-   if (scaley < 0.1)scaley = 0.1;
-   if (scalex > 4)scalex = 4;
-   if (scaley > 4)scaley = 4;
-
-   if (scalex < scaley)
-    scale = scalex;
-   else
-    scale = scaley;
-
-   int nw = (plWidth * scale);
-   if (nw == 0)nw = 1;
-   int nh = (plHeight * scale);
-   if (nh == 0)nh = 1;
-
-   draw1.SetWidth (nw);
-   draw1.SetHeight (nh);
-
-
-   draw1.SetImgFileName (share + lxT ("boards/") + pboard->GetPictureFileName (), scale, scale);
-   pboard->EvOnShow ();
-
-   if (osc_on)
-    {
-     menu1_Modules_Oscilloscope_EvMenuActive (this);
-     osc_on = 0;
-    }
-   if (spare_on)
-    {
-     menu1_Modules_Spareparts_EvMenuActive (this);
-     spare_on = 0;
-    }
-  }
+ need_resize = 0;
 }
 
 void
@@ -1142,10 +1182,10 @@ CPWindow1::LoadWorkspace(lxString fnpzw)
    return;
   }
  //write options
- strncpy (fzip, (char*) lxGetTempDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (fzip, (char*) lxGetTempDir (lxT ("picsimlab")).char_str (), 1023);
  strncat (fzip, "/", 1023);
 
- strncpy (home, (char*) lxGetTempDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (home, (char*) lxGetTempDir (lxT ("picsimlab")).char_str (), 1023);
  strncat (home, "/picsimlab_workspace/", 1023);
 
  lxRemoveDir (home);
@@ -1388,11 +1428,11 @@ CPWindow1::SaveWorkspace(lxString fnpzw)
 
  //write options
 
- strncpy (home, (char*) lxGetUserDataDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (home, (char*) lxGetUserDataDir (lxT ("picsimlab")).char_str (), 1023);
  snprintf (fname, 1279, "%s/picsimlab.ini", home);
  prefs.SaveToFile (fname);
 
- strncpy (home, (char*) lxGetTempDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (home, (char*) lxGetTempDir (lxT ("picsimlab")).char_str (), 1023);
  strncat (home, "/picsimlab_workspace/", 1023);
 
 #ifdef CONVERTER_MODE
@@ -1415,6 +1455,7 @@ CPWindow1::SaveWorkspace(lxString fnpzw)
  saveprefs (lxT ("picsimlab_debugt"), itoa (debug_type));
  saveprefs (lxT ("picsimlab_debugp"), itoa (debug_port));
  saveprefs (lxT ("picsimlab_position"), itoa (GetX ()) + lxT (",") + itoa (GetY ()));
+ saveprefs (lxT ("picsimlab_scale"), ftoa (scale));
  saveprefs (lxT ("osc_on"), itoa (pboard->GetUseOscilloscope ()));
  saveprefs (lxT ("spare_on"), itoa (pboard->GetUseSpareParts ()));
  saveprefs (lxT ("picsimlab_lfile"), lxT (" "));
@@ -1449,7 +1490,7 @@ CPWindow1::SaveWorkspace(lxString fnpzw)
  lxRemoveDir (home);
 
 
- strncpy (home, (char*) lxGetUserDataDir (_T ("picsimlab")).char_str (), 1023);
+ strncpy (home, (char*) lxGetUserDataDir (lxT ("picsimlab")).char_str (), 1023);
  snprintf (fname, 1279, "%s/picsimlab.ini", home);
  prefs.Clear ();
  prefs.LoadFromFile (fname);
@@ -1519,8 +1560,17 @@ CPWindow1::menu1_Tools_SerialTerm_EvMenuActive(CControl * control)
 #ifdef _WIN_  
  lxExecute (share + lxT ("/../tools/cutecom/cutecom.exe"));
 #else
-
+ //lxExecute (dirname(lxGetExecutablePath ())+"/cutecom", lxEXEC_MAKE_GROUP_LEADER);
+ //using system binary
  lxExecute ("cutecom", lxEXEC_MAKE_GROUP_LEADER);
+
+ if (!(lxFileExists (dirname (lxGetExecutablePath ()) + "/cutecom")
+       || lxFileExists ("/usr/bin/cutecom")
+       || lxFileExists ("/usr/local/bin/cutecom")))
+  {
+   printf ("cutecom não instalado\n");
+   Message_sz ("The cutecom application is not found!\n\nPlease install cutecom in your system!\n\n In Debian based distro use: sudo apt-get install cutecom", 500, 240);
+  }
 #endif  
 }
 
@@ -1531,7 +1581,7 @@ CPWindow1::menu1_Tools_SerialRemoteTank_EvMenuActive(CControl * control)
  lxExecute (share + lxT ("/../srtank.exe"));
 #else
 
- lxExecute ("srtank", lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute (dirname (lxGetExecutablePath ()) + "/srtank", lxEXEC_MAKE_GROUP_LEADER);
 #endif  
 }
 
@@ -1541,7 +1591,7 @@ CPWindow1::menu1_Tools_Esp8266ModemSimulator_EvMenuActive(CControl * control)
 #ifdef _WIN_  
  lxExecute (share + lxT ("/../espmsim.exe"));
 #else
- lxExecute ("espmsim", lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute (dirname (lxGetExecutablePath ()) + "/espmsim", lxEXEC_MAKE_GROUP_LEADER);
 #endif  
 }
 
@@ -1549,6 +1599,12 @@ void
 CPWindow1::menu1_Tools_ArduinoBootloader_EvMenuActive(CControl * control)
 {
  LoadHexFile (share + "bootloaders/arduino_" + pboard->GetProcessorName () + ".hex");
+}
+
+void
+CPWindow1::menu1_Tools_MPLABXDebuggerPlugin_EvMenuActive(CControl * control)
+{
+ lxLaunchDefaultBrowser (lxT ("https://github.com/lcgamboa/picsimlab_md/releases"));
 }
 
 void
@@ -1618,9 +1674,10 @@ void
 CPWindow1::Set_remotec_port(unsigned short rcp)
 {
  remotec_port = rcp;
-
+#ifndef __EMSCRIPTEN__
  rcontrol_end ();
  rcontrol_init (remotec_port);
+#endif 
 }
 
 

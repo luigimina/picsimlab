@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ class cpart_UART:public part
       void PreProcess (void);
       void Process(void); 
       void PostProcess (void);
-      lxString GetPictureFileName(void){return lxT("UART/uart.png");};
+      lxString GetPictureFileName(void){return lxT("UART/uart.svg");};
       lxString GetInputMapFile(void){return lxT("UART/uart_i.map");};
       lxString GetOutputMapFile(void){return lxT("UART/uart_o.map");};
       lxString GetPropertiesWindowFile(void){return lxT("UART/uart.lxrad");};
@@ -61,6 +61,7 @@ class cpart_UART:public part
       unsigned short _ret; 
       char uart_name[200];
       unsigned int uart_speed;
+      lxFont font;
 };
 
 

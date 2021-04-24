@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -61,19 +61,20 @@ const char pin_values[10][10] = {
  */
 
 
-cpart_SDCard::cpart_SDCard(unsigned x, unsigned y)
+cpart_SDCard::cpart_SDCard(unsigned x, unsigned y):
+font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image;
+ lxImage image(&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
  canvas.Create (Window5.GetWWidget (), Bitmap);
 
@@ -112,9 +113,8 @@ cpart_SDCard::Draw(void)
  int i;
  int to;
 
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -127,13 +127,13 @@ cpart_SDCard::Draw(void)
      canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
      canvas.SetFgColor (255, 255, 255);
      to = strlen (sdcard_fname) + 4;
-     if (to < 45)
+     if (to < 38)
       {
        to = 0;
       }
      else
       {
-       to = to - 45;
+       to = to - 38;
       }
      canvas.RotatedText (lxT ("Img:") + lxString (sdcard_fname + to), output[i].x1, output[i].y1, 0);
      break;
@@ -377,5 +377,5 @@ cpart_SDCard::filedialog_EvOnClose(int retId)
 void
 cpart_SDCard::PostProcess(void) { }
 
-part_init("SD Card", cpart_SDCard);
+part_init("SD Card", cpart_SDCard, "Other");
 

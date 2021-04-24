@@ -613,11 +613,11 @@ cboard_Curiosity_HPC::EvMouseButtonRelease(uint button, uint x, uint y, uint sta
 //This is the critical code for simulator running speed
 
 void
-cboard_Curiosity_HPC::Draw(CDraw *draw, double scale)
+cboard_Curiosity_HPC::Draw(CDraw *draw)
 {
  int i;
 
- draw->Canvas.Init (scale, scale); //initialize draw context
+ draw->Canvas.Init (Scale, Scale); //initialize draw context
 
  //board_8 draw 
  for (i = 0; i < outputc; i++) //run over all outputs
@@ -629,7 +629,7 @@ cboard_Curiosity_HPC::Draw(CDraw *draw, double scale)
      switch (output[i].id)//search for color of output
       {
       case O_D6: //green using picpwr value
-       draw->Canvas.SetColor (0, 225 * Window1.Get_mcupwr () + 30, 0);
+       draw->Canvas.SetColor (0, 200 * Window1.Get_mcupwr () + 55, 0);
        break;
       case O_D2: //Red using pin 6 mean  value (RA4) 
        draw->Canvas.SetColor (pic.pins[5].oavalue, 0, 0);
@@ -728,13 +728,13 @@ cboard_Curiosity_HPC::Draw(CDraw *draw, double scale)
 
 
  //RA4 mean value to gauge1
- gauge1->SetValue (0.4444 * (pic.pins[5].oavalue - 30));
+ gauge1->SetValue ((pic.pins[5].oavalue - 55) / 2);
  //RA5 mean value to gauge2
- gauge2->SetValue (0.4444 * (pic.pins[6].oavalue - 30));
+ gauge2->SetValue ((pic.pins[6].oavalue - 55) / 2);
  //RA6 mean value to gauge3
- gauge3->SetValue (0.4444 * (pic.pins[9].oavalue - 30));
+ gauge3->SetValue ((pic.pins[9].oavalue - 55) / 2);
  //RA7 mean value to gauge4
- gauge4->SetValue (0.4444 * (pic.pins[8].oavalue - 30));
+ gauge4->SetValue ((pic.pins[8].oavalue - 55) / 2);
 
 
 }
@@ -749,16 +749,10 @@ cboard_Curiosity_HPC::Run_CPU(void)
  unsigned int alm[28];
 
  int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- long int NSTEPJ = Window1.GetNSTEPJ (); //number of steps in 100ms
+ long int NSTEP = Window1.GetNSTEP () / pic.PINCOUNT; //number of steps in 100ms
 
 
  //reset mean value
- /*
- for(pi=0;pi < pic.PINCOUNT;pi++)
- {
-   alm[pi]=0;
- }
-  */
  memset (alm, 0, 20 * sizeof (unsigned int));
 
 
@@ -785,9 +779,8 @@ cboard_Curiosity_HPC::Run_CPU(void)
     if (use_oscope)Window4.SetSample ();
     if (use_spare)Window5.Process ();
 
-    //increment mean value counter if pin is high 
-    if (j < pic.PINCOUNT)
-     alm[j] += pins[j].value;
+    //increment mean value counter if pin is high
+    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
@@ -802,7 +795,7 @@ cboard_Curiosity_HPC::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < pic.PINCOUNT; pi++)
   {
-   pic.pins[pi].oavalue = (int) (((225.0 * alm[pi]) / NSTEPJ) + 30);
+   pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
   }
  if (use_spare)Window5.PostProcess ();
 }

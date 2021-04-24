@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2010-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,15 +38,16 @@ enum
 };
 
 cpart_dcmotor::cpart_dcmotor(unsigned x, unsigned y)
+:font (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
 
- lxImage image;
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ lxImage image(&Window5);
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
 
  canvas.Create (Window5.GetWWidget (), Bitmap);
@@ -98,10 +99,8 @@ cpart_dcmotor::Draw(void)
  int i, x, y, hsp;
  //char val[10];
 
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
- lxFont font_p (6, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -131,7 +130,7 @@ cpart_dcmotor::Draw(void)
       canvas.RotatedText (Window5.GetPinName (input_pins[output[i].id - O_P3]), output[i].x1 - 3, output[i].y2, 90);
      break;
     case O_MT1:
-     canvas.SetColor (165, 165, 165);
+     canvas.SetColor (153, 153, 153);
      canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
 
 
@@ -145,14 +144,6 @@ cpart_dcmotor::Draw(void)
      x = -18 * sin ((2 * M_PI * (value / 200.0)));
      y = 18 * cos ((2 * M_PI * (value / 200.0)));
      canvas.Circle (1, output[i].cx + x, output[i].cy + y, 5);
-     /*
-     canvas.SetColor (250, 250, 250);
-     canvas.Rectangle (1, output[i].x1 + 6, output[i].y2 + 6, 20, 10);
-     snprintf (val, 10, "%4.2f", 5.0 * (value) / 200.0);
-     canvas.SetColor (150, 0, 0);
-     canvas.SetFont (font_p);
-     canvas.RotatedText (val, output[i].x1 + 6, output[i].y2 + 6, 0);
-      */
      break;
     case O_ST:
      canvas.SetFgColor (0, 0, 0);
@@ -223,7 +214,7 @@ cpart_dcmotor::PreProcess(void)
  if (input_pins[2])
   {
    //TODO Add transfer funcion of dc motor
-   speed = (ppins[input_pins[2] - 1].oavalue - 30) / 2.24;
+   speed = (ppins[input_pins[2] - 1].oavalue - 55) / 2;
   }
 
  if (ia && !ib)
@@ -293,7 +284,7 @@ cpart_dcmotor::PreProcess(void)
   }
  else
   {
-   step = Window1.GetBoard ()->MGetInstClock () / ((da > 0) ? da * 10 : -da * 10);
+   step = Window1.GetBoard ()->MGetInstClockFreq () / ((da > 0) ? da * 10 : -da * 10);
   }
 
  dprintf ("state=%i da=%f  %3i  %3i  dir=%i  step=%i\n", state, da, value, value_old, dir, step);
@@ -457,5 +448,5 @@ cpart_dcmotor::ReadPropertiesWindow(CPWindow * WProp)
 }
 
 
-part_init("DC Motor", cpart_dcmotor);
+part_init("DC Motor", cpart_dcmotor, "Output");
 

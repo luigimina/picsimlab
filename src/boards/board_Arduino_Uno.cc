@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2015-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2015-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -495,11 +495,11 @@ cboard_Arduino_Uno::EvMouseButtonRelease(uint button, uint x, uint y, uint state
 //This is the critical code for simulator running speed
 
 void
-cboard_Arduino_Uno::Draw(CDraw *draw, double scale)
+cboard_Arduino_Uno::Draw(CDraw *draw)
 {
  int i;
 
- draw->Canvas.Init (scale, scale); //initialize draw context
+ draw->Canvas.Init (Scale, Scale); //initialize draw context
 
  //board  draw 
  for (i = 0; i < outputc; i++) //run over all outputs
@@ -509,7 +509,7 @@ cboard_Arduino_Uno::Draw(CDraw *draw, double scale)
      switch (output[i].id)
       {
       case O_ON:
-       draw->Canvas.SetColor (0, 225 * Window1.Get_mcupwr () + 30, 0);
+       draw->Canvas.SetColor (0, 200 * Window1.Get_mcupwr () + 55, 0);
        break;
       case O_RX:
        draw->Canvas.SetColor (0, 255 - pins[1].oavalue, 0);
@@ -528,11 +528,9 @@ cboard_Arduino_Uno::Draw(CDraw *draw, double scale)
        break;
       }
 
-     draw->Canvas.Rectangle (1, output[i].x1, output[i].y1,
-                             output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
-
      if (output[i].id == O_RST)
       {
+       draw->Canvas.Circle (1, output[i].cx, output[i].cy, 11);
        if (p_RST)
         {
          draw->Canvas.SetColor (15, 15, 15);
@@ -542,6 +540,12 @@ cboard_Arduino_Uno::Draw(CDraw *draw, double scale)
          draw->Canvas.SetColor (55, 55, 55);
         }
        draw->Canvas.Circle (1, output[i].cx, output[i].cy, 9);
+      }
+     else
+      {
+       draw->Canvas.Rectangle (1, output[i].x1, output[i].y1,
+                               output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
+
       }
     }
   }
@@ -553,12 +557,12 @@ cboard_Arduino_Uno::Draw(CDraw *draw, double scale)
  draw->Update ();
 
 
- gauge1->SetValue (0.45 * (pins[4].oavalue - 30));
- gauge2->SetValue (0.45 * (pins[10].oavalue - 30));
- gauge3->SetValue (0.45 * (pins[11].oavalue - 30));
- gauge4->SetValue (0.45 * (pins[14].oavalue - 30));
- gauge5->SetValue (0.45 * (pins[15].oavalue - 30));
- gauge6->SetValue (0.45 * (pins[16].oavalue - 30));
+ gauge1->SetValue ((pins[4].oavalue - 55) / 2);
+ gauge2->SetValue ((pins[10].oavalue - 55) / 2);
+ gauge3->SetValue ((pins[11].oavalue - 55) / 2);
+ gauge4->SetValue ((pins[14].oavalue - 55) / 2);
+ gauge5->SetValue ((pins[15].oavalue - 55) / 2);
+ gauge6->SetValue ((pins[16].oavalue - 55) / 2);
 
 }
 
@@ -573,19 +577,15 @@ cboard_Arduino_Uno::Run_CPU(void)
  unsigned int alm[40];
 
  int JUMPSTEPS = Window1.GetJUMPSTEPS ()*4.0; //number of steps skipped
- long int NSTEPJ = Window1.GetNSTEPJ (); //number of steps in 100ms
+ int pinc = MGetPinCount ();
+ long int NSTEP = 4.0 * Window1.GetNSTEP () / pinc; //number of steps in 100ms
 
  long long unsigned int cycle_start;
  int twostep = 0;
 
- int pinc = MGetPinCount ();
+
  //reset mean value
- /*
- for(pi=0;pi < MGetPinCount();pi++)
- {
-   alm[pi]=0;
- }
-  */
+
  memset (alm, 0, pinc * sizeof (unsigned int));
 
  //read pic.pins to a local variable to speed up 
@@ -625,8 +625,7 @@ cboard_Arduino_Uno::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    if (j < pinc)
-     alm[j] += pins[j].value;
+    alm[i % pinc] += pins[i % pinc].value;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
@@ -642,7 +641,7 @@ cboard_Arduino_Uno::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < MGetPinCount (); pi++)
   {
-   cboard_Arduino_Uno::pins[pi].oavalue = (int) (((225.0 * alm[pi]) / NSTEPJ) + 30);
+   cboard_Arduino_Uno::pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
   }
 
  if (use_spare)Window5.PostProcess ();

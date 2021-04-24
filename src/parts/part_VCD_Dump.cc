@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2010-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,16 +46,17 @@ enum
  I_START, I_VIEW
 };
 
-cpart_VCD_Dump::cpart_VCD_Dump(unsigned x, unsigned y)
+cpart_VCD_Dump::cpart_VCD_Dump(unsigned x, unsigned y) :
+font(9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
  ReadMaps ();
 
- lxImage image;
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ());
+ lxImage image (&Window5);
+ image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
 
- Bitmap = lxGetBitmapRotated (&image, &Window5, orientation);
+ Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
  canvas.Create (Window5.GetWWidget (), Bitmap);
 
@@ -128,12 +129,12 @@ cpart_VCD_Dump::Draw(void)
 
  int i;
  int to;
+ int r, g, b;
 
  const picpin * ppins = Window5.GetPinsValues ();
 
- canvas.Init (1.0, 1.0, orientation);
+ canvas.Init (Scale, Scale, Orientation);
 
- lxFont font (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
  canvas.SetFont (font);
 
  for (i = 0; i < outputc; i++)
@@ -188,7 +189,20 @@ cpart_VCD_Dump::Draw(void)
       {
        canvas.SetColor (30, 0, 0);
       }
+     canvas.SetFgColor (0, 0, 0);
+     //draw a circle
+     color1 = canvas.GetBgColor ();
+     r = color1.Red () - 120;
+     g = color1.Green () - 120;
+     b = color1.Blue () - 120;
+     if (r < 0)r = 0;
+     if (g < 0)g = 0;
+     if (b < 0)b = 0;
+     color2.Set (r, g, b);
+     canvas.SetBgColor (color2);
      canvas.Circle (1, output[i].x1, output[i].y1, output[i].r);
+     canvas.SetBgColor (color1);
+     canvas.Circle (1, output[i].x1, output[i].y1, output[i].r - 3);
      break;
     case O_REC:
      if (rec > 0)
@@ -199,7 +213,20 @@ cpart_VCD_Dump::Draw(void)
       {
        canvas.SetColor (255, 0, 0);
       }
+     canvas.SetFgColor (0, 0, 0);
+     //draw a circle
+     color1 = canvas.GetBgColor ();
+     r = color1.Red () - 120;
+     g = color1.Green () - 120;
+     b = color1.Blue () - 120;
+     if (r < 0)r = 0;
+     if (g < 0)g = 0;
+     if (b < 0)b = 0;
+     color2.Set (r, g, b);
+     canvas.SetBgColor (color2);
      canvas.Circle (1, output[i].x1, output[i].y1, output[i].r);
+     canvas.SetBgColor (color1);
+     canvas.Circle (1, output[i].x1, output[i].y1, output[i].r - 3);
      break;
     }
 
@@ -411,7 +438,7 @@ cpart_VCD_Dump::EvMouseButtonPress(uint button, uint x, uint y, uint state)
       case I_START:
        if (!rec)
         {
-         float tscale = 1.0e9 / Window1.GetBoard ()->MGetInstClock (); //ns step
+         float tscale = 1.0e9 / Window1.GetBoard ()->MGetInstClockFreq (); //ns step
 
          f_vcd = fopen (f_vcd_name, "w");
          vcd_count = 0;
@@ -488,7 +515,7 @@ cpart_VCD_Dump::EvMouseButtonPress(uint button, uint x, uint y, uint state)
        lxExecute (Window1.GetSharePath () + lxT ("/../tools/gtkwave/bin/gtkwave.exe ") + f_vcd_name);
 #else
 
-       lxExecute (lxString ("gtkwave ") + f_vcd_name, lxEXEC_MAKE_GROUP_LEADER);
+       lxExecute (dirname (lxGetExecutablePath ()) + lxString ("/gtkwave ") + f_vcd_name, lxEXEC_MAKE_GROUP_LEADER);
 #endif
 #endif
        break;
@@ -497,5 +524,5 @@ cpart_VCD_Dump::EvMouseButtonPress(uint button, uint x, uint y, uint state)
   }
 }
 
-part_init("VCD Dump", cpart_VCD_Dump);
+part_init("VCD Dump", cpart_VCD_Dump, "Virtual");
 

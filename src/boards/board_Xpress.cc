@@ -511,12 +511,12 @@ cboard_Xpress::EvMouseButtonRelease(uint button, uint x, uint y, uint state)
 //This is the critical code for simulator running speed
 
 void
-cboard_Xpress::Draw(CDraw *draw, double scale)
+cboard_Xpress::Draw(CDraw *draw)
 {
  int i;
 
 
- draw->Canvas.Init (scale, scale); //initialize draw context
+ draw->Canvas.Init (Scale, Scale); //initialize draw context
 
  //board_6 draw 
  for (i = 0; i < outputc; i++) //run over all outputs
@@ -528,7 +528,7 @@ cboard_Xpress::Draw(CDraw *draw, double scale)
      switch (output[i].id)//search for color of output
       {
       case O_D1: //green using picpwr value
-       draw->Canvas.SetColor (0, 225 * Window1.Get_mcupwr () + 30, 0);
+       draw->Canvas.SetColor (0, 200 * Window1.Get_mcupwr () + 55, 0);
        break;
       case O_D2: //Red using pin 27 mean  value (RA0) 
        draw->Canvas.SetColor (pic.pins[26].oavalue, 0, 0);
@@ -598,19 +598,14 @@ cboard_Xpress::Draw(CDraw *draw, double scale)
  draw->Canvas.End ();
  draw->Update ();
 
-
-
-
  //RA5 mean value to gauge1
- gauge1->SetValue (0.4444 * (pic.pins[26].oavalue - 30));
+ gauge1->SetValue ((pic.pins[26].oavalue - 55) / 2);
  //RA1 mean value to gauge2
- gauge2->SetValue (0.4444 * (pic.pins[27].oavalue - 30));
+ gauge2->SetValue ((pic.pins[27].oavalue - 55) / 2);
  //RA2 mean value to gauge3
- gauge3->SetValue (0.4444 * (pic.pins[0].oavalue - 30));
+ gauge3->SetValue ((pic.pins[0].oavalue - 55) / 2);
  //RC5 mean value to gauge4
- gauge4->SetValue (0.4444 * (pic.pins[1].oavalue - 30));
-
-
+ gauge4->SetValue ((pic.pins[1].oavalue - 55) / 2);
 
 }
 
@@ -624,16 +619,10 @@ cboard_Xpress::Run_CPU(void)
  unsigned int alm[28];
 
  int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- long int NSTEPJ = Window1.GetNSTEPJ (); //number of steps in 100ms
+ long int NSTEP = Window1.GetNSTEP () / pic.PINCOUNT; //number of steps in 100ms
 
 
  //reset mean value
- /*
- for(pi=0;pi < pic.PINCOUNT;pi++)
- {
-   alm[pi]=0;
- }
-  */
  memset (alm, 0, 28 * sizeof (unsigned int));
 
  //read pic.pins to a local variable to speed up 
@@ -657,19 +646,11 @@ cboard_Xpress::Run_CPU(void)
     if (use_oscope)Window4.SetSample ();
     if (use_spare)Window5.Process ();
 
-    //increment mean value counter if pin is high 
-    if (j < pic.PINCOUNT)
-     alm[j] += pins[j].value;
+    //increment mean value counter if pin is high
+    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
-      /*  
-      //increment mean value counter if pin is high  
-      for(pi=0;pi < pic.PINCOUNT;pi++)
-      {
-       alm[pi]+=pins[pi].value;
-      }
-       */
       //set analog pin 3 (RA4 ANA4) with value from scroll  
       pic_set_apin (3, (5.0 * pot1 / 199));
 
@@ -682,7 +663,7 @@ cboard_Xpress::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < pic.PINCOUNT; pi++)
   {
-   pic.pins[pi].oavalue = (int) (((225.0 * alm[pi]) / NSTEPJ) + 30);
+   pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
   }
 
  if (use_spare)Window5.PostProcess ();

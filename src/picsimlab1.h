@@ -98,6 +98,7 @@ public:
     CItemMenu menu1_Tools_SerialRemoteTank;
     CItemMenu menu1_Tools_Esp8266ModemSimulator;
     CItemMenu menu1_Tools_ArduinoBootloader;
+    CItemMenu menu1_Tools_MPLABXDebuggerPlugin;
     CItemMenu menu1_Help_Contents;
     CItemMenu menu1_Help_Board;
     CItemMenu menu1_Help_Examples;
@@ -132,6 +133,7 @@ public:
     void menu1_Tools_SerialRemoteTank_EvMenuActive(CControl * control);
     void menu1_Tools_Esp8266ModemSimulator_EvMenuActive(CControl * control);
     void menu1_Tools_ArduinoBootloader_EvMenuActive(CControl * control);
+    void menu1_Tools_MPLABXDebuggerPlugin_EvMenuActive(CControl * control);
     void menu1_Help_Contents_EvMenuActive(CControl * control);
     void menu1_Help_Examples_EvMenuActive(CControl * control);
     void menu1_Help_Board_EvMenuActive(CControl * control);
@@ -153,8 +155,8 @@ public:
      */
     void saveprefs(lxString name, lxString value);
 
-    void Configure(CControl * control, const char * home);
-    void board_Event(CControl * control);
+    void Configure(CControl * control, const char * home, int use_default_board = 0);
+    void board_Event(CControl * control); 
     void thread1_EvThreadRun(CControl * control);
 
     /**
@@ -332,7 +334,9 @@ private:
     float over;
     int create;
 
-    int ondraw;
+    int crt;
+    
+    int need_resize;
     
     unsigned int error;
     lxString pzw_ver;

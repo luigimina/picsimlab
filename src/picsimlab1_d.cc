@@ -178,7 +178,7 @@ CPWindow1::CPWindow1(void)
   menu1_Tools.SetName(lxT("menu1_Tools"));
   menu1_Tools.SetTag(0);
   menu1_Tools.SetText(lxT("Tools"));
-  menu1_Tools.SetMenuItems(lxT("Serial Term,Serial Remote Tank,Esp8266 Modem Simulator,Arduino Bootloader,"));
+  menu1_Tools.SetMenuItems(lxT("Serial Term,Serial Remote Tank,Esp8266 Modem Simulator,Arduino Bootloader,MPLABX Debugger Plugin,"));
   menu1.CreateChild(&menu1_Tools);
   //menu1_Help
   menu1_Help.SetFOwner(this);
@@ -317,7 +317,17 @@ CPWindow1::CPWindow1(void)
   menu1_Tools_ArduinoBootloader.SetEnable(1);
   menu1_Tools_ArduinoBootloader.SetSubMenu(NULL);
   menu1_Tools_ArduinoBootloader.EvMenuActive=EVMENUACTIVE & CPWindow1::menu1_Tools_ArduinoBootloader_EvMenuActive;
-  menu1_Tools.CreateChild(&menu1_Tools_ArduinoBootloader);  
+  menu1_Tools.CreateChild(&menu1_Tools_ArduinoBootloader); 
+  //menu1_Tools_MPLABXDebuggerPlugin
+  menu1_Tools_MPLABXDebuggerPlugin.SetFOwner(this);
+  menu1_Tools_MPLABXDebuggerPlugin.SetClass(lxT("CItemMenu"));
+  menu1_Tools_MPLABXDebuggerPlugin.SetName(lxT("menu1_Tools_MPLABXDebuggerPlugin"));
+  menu1_Tools_MPLABXDebuggerPlugin.SetTag(0);
+  menu1_Tools_MPLABXDebuggerPlugin.SetText(lxT("MPLABX Debugger Plugin"));
+  menu1_Tools_MPLABXDebuggerPlugin.SetEnable(1);
+  menu1_Tools_MPLABXDebuggerPlugin.SetSubMenu(NULL);
+  menu1_Tools_MPLABXDebuggerPlugin.EvMenuActive=EVMENUACTIVE & CPWindow1::menu1_Tools_MPLABXDebuggerPlugin_EvMenuActive;
+  menu1_Tools.CreateChild(&menu1_Tools_MPLABXDebuggerPlugin); 
   //menu1_Help_Contents
   menu1_Help_Contents.SetFOwner(this);
   menu1_Help_Contents.SetClass(lxT("CItemMenu"));
@@ -441,14 +451,14 @@ over=0;
 
 plWidth=10;
 plHeight=10;
-scale=0.8;
+scale=1.0;
 
 create=0;
 
 FNAME=lxT(" ");
 OldPath=lxT("");
     
-ondraw=0;    
+crt=1;    
 
 pboard=NULL;
 
@@ -457,6 +467,8 @@ cpustate=CPU_RUNNING;
 tgo=0;
   
 error=0;
+
+need_resize=0;
 
 #ifdef NO_TOOLS
    menu1.DestroyChild (&menu1_Tools);

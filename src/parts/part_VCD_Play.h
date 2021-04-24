@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2019-2020  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2019-2021  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ public:
     void Draw(void);
     void PreProcess(void);
     void Process(void);
-    lxString GetPictureFileName(void){return lxT("VCD_Play/VCD_Play.png");};
+    lxString GetPictureFileName(void){return lxT("VCD_Play/VCD_Play.svg");};
     lxString GetInputMapFile(void){return lxT("VCD_Play/VCD_Play_i.map");};
     lxString GetOutputMapFile(void){return lxT("VCD_Play/VCD_Play_o.map");};
     lxString GetPropertiesWindowFile(void){return lxT("VCD_Play/VCD_Play.lxrad");};
@@ -71,6 +71,9 @@ private:
     vcd_reg_t *vcd_data;
     int vcd_data_count;
     int vcd_ptr;
+    lxFont font;
+    lxColor color1;
+    lxColor color2;    
 };
 
 #endif /* PART_VCD_Play_H */
