@@ -201,14 +201,15 @@ cpart_dcmotor::PreProcess(void)
  int ia = 0, ib = 0;
  float da;
 
- if (input_pins[0])
+ /*if (input_pins[0])
   {
    ia = ppins[input_pins[0] - 1].value;
-  }
+  }*/
 
  if (input_pins[1])
   {
    ib = ppins[input_pins[1] - 1].value;
+   ia = !ib;
   }
 
  if (input_pins[2])
