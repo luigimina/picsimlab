@@ -353,7 +353,7 @@ CPWindow5::draw1_EvMouseMove(CControl * control, uint button, uint x, uint y, ui
   {
    for (int i = 0; i < partsc; i++)
     {
-     if (parts[i]->PointInside (x, y))
+     if (parts[i]->PointInside (x - offsetx, y - offsety))
       {
        parts[i]->EvMouseMove (button, (x - offsetx) - parts[i]->GetX (), (y - offsety) - parts[i]->GetY (), state);
        return;
@@ -745,6 +745,8 @@ CPWindow5::menu1_Edit_Zoomin_EvMenuActive(CControl * control)
 {
  scale += 0.1;
  if (scale > 2)scale = 2;
+ 
+ scale= trunc(scale*10)/10.0;
 
  for (int i = 0; i < partsc; i++)
   {
@@ -757,6 +759,9 @@ CPWindow5::menu1_Edit_Zoomout_EvMenuActive(CControl * control)
 {
  scale -= 0.1;
  if (scale < 0.1)scale = 0.1;
+ 
+ scale= trunc(scale*10)/10.0;
+ 
  for (int i = 0; i < partsc; i++)
   {
    parts[i]->SetScale (scale);
