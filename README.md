@@ -56,6 +56,8 @@ If you are on macOS you can run PICSimLab using Wine:
 
 ### In Debian Linux and derivatives Linux native:
 
+**Using a user with permission to run the sudo command:**
+
 In first time build:
 ```
 git clone --depth=1 https://github.com/lcgamboa/picsimlab.git
@@ -205,7 +207,7 @@ If the problem is not in either of the previous two options, the problem is prob
   - [individual file counters](https://somsubhra.github.io/github-release-stats/?username=lcgamboa&repository=picsimlab) (grouped per release)
 
 - SourceForge [`picsimlab`](https://sourceforge.net/projects/picsim/) repo
-  - latest PICSimLab release [![Sourceforge Latest Relesases](https://img.shields.io/sourceforge/dt/picsim/v0.8.7)](https://sourceforge.net/projects/picsim/files/v0.8.7/)
+  - latest PICSimLab release [![Sourceforge Latest Relesases](https://img.shields.io/sourceforge/dt/picsim/v0.8.8)](https://sourceforge.net/projects/picsim/files/v0.8.8/)
   - all PICSimLab releases [![Sourceforge All Relesases](https://img.shields.io/sourceforge/dt/picsim)](https://sourceforge.net/projects/picsim/files/)
 
 Credit to [Shields IO](https://shields.io) for the badges and to
