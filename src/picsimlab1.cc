@@ -86,7 +86,7 @@ usleep(unsigned int usec)
 static lxString cvt_fname;
 #endif
 
-#ifdef TDEBUG
+#if defined(TDEBUG) || defined(_NOTHREAD)  
 #ifdef _WIN_
 
 double
@@ -125,13 +125,7 @@ CPWindow1::timer1_EvOnTime(CControl * control)
  sync = 1;
  status.st[0] |= ST_T1;
 
-#ifdef _NOTHREAD
- if (timer1.GetOverTime () >= 10)
-  {
-   tgo++;
-  }
-#endif 
- 
+
  if ((!tgo)&&(timer1.GetTime () == 100))
   {
    if (crt)
@@ -151,7 +145,6 @@ CPWindow1::timer1_EvOnTime(CControl * control)
    crt = 1;
   }
 
- 
  if (!tgo)
   {
    zerocount++;
@@ -170,14 +163,19 @@ CPWindow1::timer1_EvOnTime(CControl * control)
   {
    zerocount = 0;
   }
+
  tgo++;
+#ifndef _NOTHREAD
+ cpu_mutex->Lock ();
+ cpu_cond->Signal ();
+ cpu_mutex->Unlock ();
+#endif
 
  if (tgo > 3)
   {
    timer1.SetTime (timer1.GetTime () + 5);
    tgo = 1;
   }
-
 
  if (need_resize == 1)
   {
@@ -239,7 +237,7 @@ CPWindow1::timer1_EvOnTime(CControl * control)
 void
 CPWindow1::thread1_EvThreadRun(CControl*)
 {
-#ifdef TDEBUG
+#if defined(TDEBUG) || defined(_NOTHREAD)  
  double t0, t1;
 #endif
  do
@@ -247,7 +245,7 @@ CPWindow1::thread1_EvThreadRun(CControl*)
 
    if (tgo)
     {
-#ifdef TDEBUG     
+#if defined(TDEBUG) || defined(_NOTHREAD)     
      t0 = cpuTime ();
 #endif     
      status.st[1] |= ST_TH;
@@ -255,16 +253,32 @@ CPWindow1::thread1_EvThreadRun(CControl*)
      if (debug)pboard->DebugLoop ();
      tgo--;
      status.st[1] &= ~ST_TH;
-#ifdef TDEBUG     
+#if defined(TDEBUG) || defined(_NOTHREAD)       
      t1 = cpuTime ();
-     printf ("PTime= %lf  tgo= %2i  zeroc= %2i  Timer= %3u  Perc.= %4.1lf\n",
-             t1 - t0, tgo, zerocount, Window1.timer1.GetTime (), (t1 - t0) / (Window1.timer1.GetTime ()*1e-5));
+     if ((t1 - t0) / (Window1.timer1.GetTime ()*1e-5) > 110)
+      {
+       tgo++;
+      }
+     else
+      {
+       tgo = 0;
+      }
+#ifdef TDEBUG      
+     printf ("PTime= %lf  tgo= %2i  zeroc= %2i  Timer= %3u Perc.= %4.1lf\n",
+             t1 - t0, tgo, zerocount, Window1.timer1.GetTime (),
+             (t1 - t0) / (Window1.timer1.GetTime ()*1e-5));
+#endif
 #endif     
     }
    else
     {
-     usleep (1);
+#ifndef _NOTHREAD         
+     cpu_mutex->Lock ();
+     cpu_cond->Wait ();
+     cpu_mutex->Unlock ();
+#endif     
     }
+
   }
  while (!thread1.TestDestroy ());
 }
@@ -275,7 +289,10 @@ CPWindow1::thread2_EvThreadRun(CControl*)
  do
   {
    usleep (1000);
-   rcontrol_loop ();
+   if (rcontrol_loop ())
+    {
+     usleep (100000);
+    }
   }
  while (!thread2.TestDestroy ());
 }
@@ -307,9 +324,9 @@ CPWindow1::timer2_EvOnTime(CControl * control)
      break;
     }
   }
- 
- label2.SetText (lxString ().Format ("Spd: %3.2fx", 100.0/timer1.GetTime ()));
-    
+
+ label2.SetText (lxString ().Format ("Spd: %3.2fx", 100.0 / timer1.GetTime ()));
+
  status.st[0] &= ~ST_T2;
 
  if (error & ERR_VERSION)
@@ -503,6 +520,15 @@ CPWindow1::Configure(CControl * control, const char * home, int use_default_boar
  mcurun = 1;
  mcupwr = 1;
  mcurst = 0;
+
+#ifndef _NOTHREAD    
+ if (cpu_mutex == NULL)
+  {
+   cpu_mutex = new lxMutex ();
+   cpu_cond = new lxCondition (*cpu_mutex);
+  }
+#endif
+
  //TODO: verify initialization errors
  snprintf (fname, 1023, "%s/picsimlab.ini", home);
 
@@ -759,6 +785,7 @@ CPWindow1::Configure(CControl * control, const char * home, int use_default_boar
 
  thread1.Run (); //parallel thread
 #ifndef __EMSCRIPTEN__ 
+ //FIXME remote control disabled 
  thread2.Run (); //parallel thread
 #endif 
  timer1.SetRunState (1);
@@ -846,14 +873,21 @@ CPWindow1::_EvOnDestroy(CControl * control)
 #endif
  timer1.SetRunState (0);
  timer2.SetRunState (0);
- tgo = 1;
  msleep (100);
  while (status.status)
   {
    msleep (1);
    Application->ProcessEvents ();
   }
+ tgo = 100000;
+#ifndef _NOTHREAD    
+ cpu_mutex->Lock ();
+ cpu_cond->Signal ();
+ cpu_mutex->Unlock ();
+#endif 
  thread1.Destroy ();
+ tgo = 0;
+
 #ifndef __EMSCRIPTEN__
  thread2.Destroy ();
 #endif
@@ -930,6 +964,13 @@ CPWindow1::_EvOnDestroy(CControl * control)
  GetY ();
 
  scale = 1.0;
+
+#ifndef _NOTHREAD    
+ delete cpu_cond;
+ delete cpu_mutex;
+ cpu_cond = NULL;
+ cpu_mutex = NULL;
+#endif
 }
 
 void
