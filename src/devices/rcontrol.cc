@@ -233,14 +233,33 @@ decodess(unsigned char v)
   }
 }
 
+/* Defined types
+ VS - value short
+ */
 static void
 ProcessInput(const char * msg, input_t * Input, int * ret)
 {
  lxString stemp;
-
- stemp.Printf ("%s %s= %i\r\n", msg, Input->name, *((unsigned char *) Input->status));
- *ret += sendtext ((const char *) stemp.c_str ());
+ if ((Input->name[0] == 'V')&&(Input->name[1] == 'S'))
+  {
+   short temp = ((*((unsigned char *) Input->status)) << 8) | (*(((unsigned char *) (Input->status)) + 1));
+   stemp.Printf ("%s %s= %i\r\n", msg, Input->name, temp);
+   *ret += sendtext ((const char *) stemp.c_str ());
+  }
+ else
+  {
+   stemp.Printf ("%s %s= %i\r\n", msg, Input->name, *((unsigned char *) Input->status));
+   *ret += sendtext ((const char *) stemp.c_str ());
+  }
 }
+
+/* Defined types
+ LD - led
+ DS - Display LCD
+ MT - DC motor
+ GD - step and servo angles
+ SS - seven sgments 
+ */
 
 static void
 ProcessOutput(const char * msg, output_t * Output, int * ret)
@@ -314,6 +333,33 @@ ProcessOutput(const char * msg, output_t * Output, int * ret)
      break;
     }
   }
+}
+
+static char
+pintypetoletter(unsigned char type)
+{
+ switch (type)
+  {
+  case PT_POWER:
+   return 'P';
+   break;
+  case PT_DIGITAL:
+   return 'D';
+   break;
+  case PT_ANALOG:
+   return 'A';
+   break;
+  case PT_ANAREF:
+   return 'R';
+   break;
+  case PT_USART:
+   return 'U';
+   break;
+  case PT_NC:
+   return '-';
+   break;
+  }
+ return '?';
 }
 
 int
@@ -577,6 +623,7 @@ rcontrol_loop(void)
          ret += sendtext ("  help      - show this message\r\n");
          ret += sendtext ("  info      - show actual setup info and objects\r\n");
          ret += sendtext ("  pins      - show pins directions and values\r\n");
+         ret += sendtext ("  pinsl     - show pins formated info\r\n");
          ret += sendtext ("  quit      - exit remote control interface\r\n");
          ret += sendtext ("  reset     - reset the board\r\n");
          ret += sendtext ("  set ob vl - set object with value\r\n");
@@ -671,6 +718,26 @@ rcontrol_loop(void)
            snprintf (lstemp, 100, "  pin[%02i] (%8s) %c %i                 pin[%02i] (%8s) %c %i \r\n",
                      i + 1, (const char *) Board->MGetPinName (i + 1).c_str (), (pins[i].dir == PD_IN) ? '<' : '>', pins[i].value,
                      i + 1 + p2, (const char *) Board->MGetPinName (i + 1 + p2).c_str (), (pins[i + p2].dir == PD_IN) ? '<' : '>', pins[i + p2].value);
+           ret += sendtext (lstemp);
+          }
+         ret += sendtext ("Ok\r\n>");
+        }
+       else if (!strcmp (cmd, "pinsl"))
+        {
+         //Command pinsl ========================================================
+         Board = Window1.GetBoard ();
+         pins = Board->MGetPinsValues ();
+         for (i = 0; i < Board->MGetPinCount (); i++)
+          {
+           snprintf (lstemp, 100, "  pin[%02i] %c %c %i %03i %5.3f \"%-8s\" \r\n",
+                     i + 1,
+                     pintypetoletter (pins[i].ptype),
+                     (pins[i].dir == PD_IN) ? 'I' : 'O',
+                     pins[i].value,
+                     (int) (pins[i].oavalue - 55),
+                     pins[i].avalue,
+                     (const char *) Board->MGetPinName (i + 1).c_str ()
+                     );
            ret += sendtext (lstemp);
           }
          ret += sendtext ("Ok\r\n>");
@@ -801,7 +868,19 @@ rcontrol_loop(void)
 
                if (Input->status != NULL)
                 {
-                 *((unsigned char *) Input->status) = value;
+                 if ((Input->name[0] == 'V')&&(Input->name[1] == 'S'))
+                  {
+                   *((unsigned char *) Input->status) = (value & 0xFF00) >> 8;
+                   *(((unsigned char *) Input->status) + 1) = value & 0x00FF;
+                  }
+                 else
+                  {
+                   *((unsigned char *) Input->status) = value;
+                  }
+                 if (Input->update)
+                  {
+                   *Input->update = 1;
+                  }
                  sendtext ("Ok\r\n>");
                 }
                else

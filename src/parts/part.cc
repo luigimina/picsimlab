@@ -44,6 +44,11 @@ part::ReadMaps(void)
  ReadInputMap (Window1.GetSharePath () + lxT ("parts/") + GetInputMapFile ());
  ReadOutputMap (Window1.GetSharePath () + lxT ("parts/") + GetOutputMapFile ());
 
+ for (int i = 0; i < inputc; i++)
+  {
+   input_ids[get_in_id (input[i].name)] = &input[i];
+  }
+
  for (int i = 0; i < outputc; i++)
   {
    output_ids[get_out_id (output[i].name)] = &output[i];
@@ -148,6 +153,9 @@ part::ReadInputMap(lxString fname)
        input[inputc].cy = ((input[inputc].y2 - input[inputc].y1) / 2.0) + input[inputc].y1;
        input[inputc].status = NULL;
        input[inputc].update = NULL;
+       input[inputc].value = 0;
+       input[inputc].value_s = 0;
+       input[inputc].value_f = 0;
        inputc++;
 
       }
@@ -159,8 +167,7 @@ part::ReadInputMap(lxString fname)
    //Message(lxT("Error open input.map")); Not use this in create!!
    printf ("Error open input.map \"%s\"!\n", (const char*) fname.c_str ());
   }
-
-};
+}
 
 void
 part::ReadOutputMap(lxString fname)
@@ -211,6 +218,9 @@ part::ReadOutputMap(lxString fname)
          output[outputc].cx = ((output[outputc].x2 - output[outputc].x1) / 2.0) + output[outputc].x1;
          output[outputc].cy = ((output[outputc].y2 - output[outputc].y1) / 2.0) + output[outputc].y1;
          output[outputc].status = NULL;
+         output[outputc].value = 0;
+         output[outputc].value_s = 0;
+         output[outputc].value_f = 0;
          outputc++;
         }
        else
@@ -229,6 +239,9 @@ part::ReadOutputMap(lxString fname)
          output[outputc].cx = output[outputc].x1;
          output[outputc].cy = output[outputc].y1;
          output[outputc].status = NULL;
+         output[outputc].value = 0;
+         output[outputc].value_s = 0;
+         output[outputc].value_f = 0;
          outputc++;
         }
       }
@@ -242,7 +255,7 @@ part::ReadOutputMap(lxString fname)
    printf ("Error open output.map \"%s\"!\n", (const char *) fname.c_str ());
   }
 
-};
+}
 
 int
 part::PointInside(int x, int y)

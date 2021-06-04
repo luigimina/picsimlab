@@ -220,7 +220,19 @@ CPWindow5::PropClose(int tag)
 void
 CPWindow5::PropButtonRelease(CControl * control, uint button, uint x, uint y, uint state)
 {
- Window5.PropClose (control->GetTag ());
+ switch (control->GetTag ())
+  {
+  case 0:
+  case 1:
+   Window5.PropClose (control->GetTag ());
+   break;
+  default://browse filedialog
+   Window5.filedialog1.SetType (lxFD_OPEN | lxFD_CHANGE_DIR);
+   Window5.filedialog1.SetFilter (lxT ("All Files (*.*)|*.*"));
+   Window5.Setfdtype (control->GetTag () - 2);
+   Window5.filedialog1.Run ();
+   break;
+  }
 }
 
 void
@@ -404,6 +416,7 @@ CPWindow5::draw1_EvKeyboardPress(CControl * control, const uint key, const uint 
   case 'P':
   case 'p':
    useAlias = !useAlias;
+   update_all = 1;
    Window4.SetBaseTimer ();
    break;
   case '='://+
@@ -633,6 +646,7 @@ CPWindow5::LoadPinAlias(lxString fname, unsigned char show_error_msg)
    if (show_error_msg)
     {
      useAlias = 1;
+     update_all = 1;
      Window4.SetBaseTimer ();
     }
    return 1;
@@ -748,12 +762,14 @@ CPWindow5::menu1_Edit_Clearpinalias_EvMenuActive(CControl * control)
   {
    PinAlias[i] = PinNames[i];
   }
+ update_all = 1;
 }
 
 void
 CPWindow5::menu1_Edit_Togglepinalias_EvMenuActive(CControl * control)
 {
  useAlias = !useAlias;
+ update_all = 1;
  Window4.SetBaseTimer ();
 }
 
@@ -779,6 +795,7 @@ void
 CPWindow5::menu1_Edit_Reloadpinalias_EvMenuActive(CControl * control)
 {
  LoadPinAlias (alias_fname);
+ update_all = 1;
 }
 
 void
