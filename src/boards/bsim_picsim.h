@@ -33,7 +33,7 @@
 class bsim_picsim: virtual public board
 {
   public:
-      bsim_picsim();
+      bsim_picsim(void);
       int DebugInit(int dtyppe); 
       lxString GetDebugName(void){return "MDB";};
       void DebugLoop(void);
@@ -70,7 +70,7 @@ class bsim_picsim: virtual public board
       unsigned int DBGGetCONFIGSize(void);
       unsigned int DBGGetIDSize(void);
       unsigned int DBGGetEEPROM_Size(void);
-      
+      void EndServers(void);
  protected:
       _pic pic;
 

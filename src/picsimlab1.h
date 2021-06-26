@@ -100,6 +100,7 @@ public:
     CItemMenu menu1_Tools_Esp8266ModemSimulator;
     CItemMenu menu1_Tools_ArduinoBootloader;
     CItemMenu menu1_Tools_MPLABXDebuggerPlugin;
+    CItemMenu menu1_Tools_PinViewer;
     CItemMenu menu1_Help_Contents;
     CItemMenu menu1_Help_Board;
     CItemMenu menu1_Help_Examples;
@@ -135,6 +136,7 @@ public:
     void menu1_Tools_Esp8266ModemSimulator_EvMenuActive(CControl * control);
     void menu1_Tools_ArduinoBootloader_EvMenuActive(CControl * control);
     void menu1_Tools_MPLABXDebuggerPlugin_EvMenuActive(CControl * control);
+    void menu1_Tools_PinViewer_EvMenuActive(CControl * control);
     void menu1_Help_Contents_EvMenuActive(CControl * control);
     void menu1_Help_Examples_EvMenuActive(CControl * control);
     void menu1_Help_Board_EvMenuActive(CControl * control);
@@ -160,7 +162,7 @@ public:
      */
     void saveprefs(lxString name, lxString value);
 
-    void Configure(CControl * control, const char * home, int use_default_board = 0);
+    void Configure(const char * home, int use_default_board = 0, int create = 0 );
     void board_Event(CControl * control); 
     void thread1_EvThreadRun(CControl * control);
     void thread2_EvThreadRun(CControl * control);
@@ -261,6 +263,10 @@ public:
     void SetPATH(lxString path) {
         PATH = path;
     };
+    
+    lxString GetHOME(void) {
+        return HOME;
+    };
 
     void SetFNAME(lxString fname) {
         FNAME = fname;
@@ -298,7 +304,8 @@ public:
     void LoadHexFile(lxString fname);
     void SetClock(float clk);
     float GetClock(void);
-    
+    void EndSimulation(void);
+    void RegisterError(const lxString error);
     void SetSync(unsigned char s){sync=s;};
     unsigned char GetSync(void){return sync;};
 #ifndef _NOTHREAD    
@@ -331,6 +338,7 @@ private:
     long int NSTEPJ;
     int JUMPSTEPS;
     lxString PATH;
+    lxString HOME;
     lxString FNAME;
     lxString OldPath;
     char cpustate;
@@ -345,14 +353,13 @@ private:
     board *pboard;
 
     float over;
-    int create;
 
     int crt;
     int zerocount;
     
     int need_resize;
     
-    unsigned int error;
+    lxStringList Errors;
     lxString pzw_ver;
     
     unsigned char sync;
@@ -371,8 +378,6 @@ enum {
 #define ST_T1 0x01
 #define ST_T2 0x02
 #define ST_TH 0x04
-
-#define ERR_VERSION 0x1
 
 #endif /*#CPWINDOW1*/
 

@@ -1,32 +1,34 @@
 
 # PICSimLab - Programmable IC Simulator Laboratory
 
-PICSimLab is a realtime emulator of [development boards](https://lcgamboa.github.io/picsimlab_docs/Boards.html) with integrated 
+PICSimLab is a realtime emulator of [development boards](https://lcgamboa.github.io/picsimlab_docs/0.8.9/Boards.html) with integrated 
 MPLABX/avr-gdb debugger. 
 PICSimLab supports some [picsim](https://github.com/lcgamboa/picsim) microcontrollers and 
 some [simavr](https://github.com/buserror/simavr) microcontrollers. 
 PICSimLab have integration with MPLABX/Arduino IDE for programming the boards microcontrollers.
+As the purpose of PICSimLab is to emulate real hardware it does not have any source code editing support.
+For code editing and debugging the same tools used for a real board should be used with PICSimLab, such as MPLABX or Arduino IDE. 
 
-PICSimlab supports several devices (spare parts) that can be connected to the boards for simulation. 
+PICSimLab supports several devices (spare parts) that can be connected to the boards for simulation. 
 As for example LEDs and push buttons for simple outputs and inputs and some more complex ones like the ethernet 
 shield w5500 for internet connection or the color graphic display ili9340 with touchscreen. 
-The the complete list of parts can be accessed in the [documentation](https://lcgamboa.github.io/picsimlab_docs/Spare_Parts.html). 
+The the complete list of parts can be accessed in the [documentation](https://lcgamboa.github.io/picsimlab_docs/0.8.9/SpareParts.html). 
 
-The [experimental version boards](https://lcgamboa.github.io/picsimlab_docs/Experimental_Boards.html) supports 
+The [experimental version boards](https://lcgamboa.github.io/picsimlab_docs/0.8.9/ExperimentalBoards.html) supports 
 [uCsim](http://mazsola.iit.uni-miskolc.hu/~drdani/embedded/ucsim/), 
 [gpsim](http://gpsim.sourceforge.net/) and [qemu-stm32](http://beckus.github.io/qemu_stm32/) simulators
 in addition to the stable ones.
 
 
-![PICsimLab](https://raw.githubusercontent.com/lcgamboa/picsimlab_docs/main/screenshot.png "PICsimLab")
+![PICsimLab](https://raw.githubusercontent.com/lcgamboa/picsimlab_docs/main/0.8.9/img/screenshot.png "PICsimLab")
 
-![PICsimLab](https://raw.githubusercontent.com/lcgamboa/picsimlab_docs/main/picsimlab4.png "PICsimLab")
+![PICsimLab](https://raw.githubusercontent.com/lcgamboa/picsimlab_docs/main/0.8.9/img/picsimlab4.png "PICsimLab")
 
 ## More info
 
 ### For users
 
-[Online Documentation](https://lcgamboa.github.io/picsimlab_docs/)
+[Online Documentation](https://lcgamboa.github.io/picsimlab_docs/0.8.9/)
 
 [Examples](https://lcgamboa.github.io/picsimlab_examples/examples/examples_index.html)
 
@@ -34,9 +36,13 @@ in addition to the stable ones.
 
 [Changelog](./CHANGELOG.md)
 
+[PICSimLab on Twitter](https://twitter.com/PICSimLab)
+
+[PICSimLab on Discord](https://discord.com/invite/fMT8szFYq7)
+
 ### For developers
 
-[Development Documentation](https://lcgamboa.github.io/picsimlab_docs/devel/html/)
+[Development Documentation](https://lcgamboa.github.io/picsimlab_docs/0.8.9/devel/html/)
 
 [TODO list](./TODO.md)
 
@@ -51,6 +57,14 @@ If you are on macOS you can run PICSimLab using Wine:
 - Download and install [`xquartz`](https://www.xquartz.org)
 - Download and install [Wine](https://dl.winehq.org/wine-builds/macosx/download.html)
 - Download the executable and double-click it to run the installer
+
+## Unstable last code version executables download 
+
+The binaries of last code available on github can be downloaded at: [Sourceforge.net](https://sourceforge.net/projects/picsim/files/latest%20code%20build%20%28unstable%29/)
+ 
+The unstable test version have the unreleased features of [Changelog_auto.md](./CHANGELOG_auto.md)
+
+If you need a specific binary that is not available please contact me. 
 
 ## Install from source
 

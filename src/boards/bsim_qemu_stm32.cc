@@ -23,21 +23,13 @@
    For e-mail suggestions :  lcgamboa@yahoo.com
    ######################################################################## */
 
-
-#include "bsim_qemu_stm32.h"
-#include"../picsimlab1.h"
-#include"../serial_port.h"
-
-void setblock(int sock_descriptor);
-void setnblock(int sock_descriptor);
-
 #ifndef _WIN_
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<sys/un.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
-#include <lxrad/lxutils.h>
+
 #define INVALID_HANDLE_VALUE -1;
 #else
 #include<winsock2.h>
@@ -45,6 +37,13 @@ void setnblock(int sock_descriptor);
 #define _TCP_
 #define MSG_NOSIGNAL 0
 #endif
+
+#include "bsim_qemu_stm32.h"
+#include"../picsimlab1.h"
+#include"../serial_port.h"
+
+void setblock(int sock_descriptor);
+void setnblock(int sock_descriptor);
 
 static int listenfd = -1;
 static int listenfd_mon = -1;
@@ -206,10 +205,11 @@ bsim_qemu_stm32::MInit(const char * processor, const char * fname, float freq)
 #ifdef _WIN_  
  if (!lxFileExists (Window1.GetSharePath () + lxT ("/../qemu-stm32.exe")))
 #else
- if (!lxFileExists (dirname(lxGetExecutablePath()) + lxT("/qemu-stm32")))
+ if (!lxFileExists (dirname (lxGetExecutablePath ()) + lxT ("/qemu-stm32")))
 #endif  
   {
-   Message ("qemu-stm32 not found!");
+   printf ("picsimlab: qemu-stm32 not found! \n");
+   Window1.RegisterError ("qemu-stm32 not found!");
    return -1;
   }
 
@@ -275,7 +275,7 @@ bsim_qemu_stm32::MInit(const char * processor, const char * fname, float freq)
       );
   */
 #else
- lxExecute (dirname(lxGetExecutablePath()) + lxT("/") +cmd, lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute (dirname (lxGetExecutablePath ()) + lxT ("/") + cmd, lxEXEC_MAKE_GROUP_LEADER);
 #endif  
 
  //monitor  
@@ -328,7 +328,7 @@ bsim_qemu_stm32::MEnd(void)
   {
    qemu_cmd ("quit");
   }
- connected = 0;
+
  if (sockfd >= 0)close (sockfd);
  if (sockmon >= 0)close (sockmon);
 
@@ -345,10 +345,23 @@ bsim_qemu_stm32::MEnd(void)
 #else
  usleep (200000);
 #endif
- if (fname_bak[0])
+
+ if (connected && fname_bak[0])
   {
    lxRenameFile (fname_bak, fname_);
   }
+
+ connected = 0;
+}
+
+void
+bsim_qemu_stm32::EndServers(void)
+{
+ if (listenfd >= 0)close (listenfd);
+ if (listenfd_mon >= 0)close (listenfd_mon);
+
+ listenfd = -1;
+ listenfd_mon = -1;
 }
 
 void
@@ -952,7 +965,7 @@ bsim_qemu_stm32::MSetAPin(int pin, float value)
      unsigned short svalue = (unsigned short) (4096 * value / 3.3);
 
      pins[pin - 1].ptype = PT_ANALOG;
-        
+
      if (ADCvalues[channel] != svalue)
       {
        unsigned char buff[3];

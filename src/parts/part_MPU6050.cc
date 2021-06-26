@@ -303,6 +303,12 @@ cpart_MPU6050::ConfigurePropertiesWindow(CPWindow * WProp)
  lxString Items = Window5.GetPinsNames ();
  lxString spin;
 
+ 
+ ((CCombo*) WProp->GetChildByName ("combo1"))->SetText ("+5V");
+ 
+ ((CCombo*) WProp->GetChildByName ("combo2"))->SetText ("GND");
+ 
+ 
  ((CCombo*) WProp->GetChildByName ("combo3"))->SetItems (Items);
  if (mpu_pins[0] == 0)
   ((CCombo*) WProp->GetChildByName ("combo3"))->SetText ("0  NC");
@@ -418,37 +424,46 @@ cpart_MPU6050::Process(void)
 void
 cpart_MPU6050::PostProcess(void)
 {
- switch ((mpu.regs[ACCEL_CONFIG]&0x18) >> 3)
+
+ if (mpu.update)
   {
-  case 0: //2g
-   asens = 16383 / 50.0;
-   break;
-  case 1: //4g
-   asens = 8191 / 25.0;
-   break;
-  case 2: //8g
-   asens = 4095 / 12.5;
-   break;
-  case 3: //16g
-   asens = 2047 / 6.25;
-   break;
-  }
+   switch ((mpu.regs[ACCEL_CONFIG]&0x18) >> 3)
+    {
+    case 0: //2g
+     asens = 16383 / 50.0;
+     break;
+    case 1: //4g
+     asens = 8191 / 25.0;
+     break;
+    case 2: //8g
+     asens = 4095 / 12.5;
+     break;
+    case 3: //16g
+     asens = 2047 / 6.25;
+     break;
+    }
 
 
- switch ((mpu.regs[GYRO_CONFIG]&0x18) >> 3)
-  {
-  case 0: //250g/s
-   gsens = 131 * 2.5;
-   break;
-  case 1: //500g/s
-   gsens = 65.5 * 5;
-   break;
-  case 2: //1000g/s
-   gsens = 32.8 * 10;
-   break;
-  case 3: //2000g/s
-   gsens = 16.4 * 20;
-   break;
+   switch ((mpu.regs[GYRO_CONFIG]&0x18) >> 3)
+    {
+    case 0: //250g/s
+     gsens = 131 * 2.5;
+     break;
+    case 1: //500g/s
+     gsens = 65.5 * 5;
+     break;
+    case 2: //1000g/s
+     gsens = 32.8 * 10;
+     break;
+    case 3: //2000g/s
+     gsens = 16.4 * 20;
+     break;
+    }
+   mpu.update = 0;
+   for (int i = 0; i < outputc; i++)
+    {
+     output[i].update = 1;
+    }
   }
 }
 
@@ -658,5 +673,5 @@ cpart_MPU6050::EvMouseMove(uint button, uint x, uint y, uint state)
 
 
 
-part_init("MPU6050", cpart_MPU6050, "Input");
+part_init(PART_MPU6050_Name, cpart_MPU6050, "Input");
 

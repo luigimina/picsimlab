@@ -28,7 +28,7 @@
 
 #include"../picsimlab1.h"
 
-bsim_picsim::bsim_picsim()
+bsim_picsim::bsim_picsim(void)
 {
  pic.PINCOUNT = 0;
 }
@@ -349,4 +349,10 @@ unsigned int
 bsim_picsim::DBGGetEEPROM_Size(void)
 {
  return pic.EEPROMSIZE;
+}
+
+void
+bsim_picsim::EndServers(void)
+{
+ mplabxd_server_end ();
 }

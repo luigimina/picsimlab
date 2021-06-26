@@ -255,6 +255,8 @@ CPWindow1::thread1_EvThreadRun(CControl*)
      status.st[1] &= ~ST_TH;
 #if defined(TDEBUG) || defined(_NOTHREAD)       
      t1 = cpuTime ();
+#endif     
+#if defined(_NOTHREAD)     
      if ((t1 - t0) / (Window1.timer1.GetTime ()*1e-5) > 110)
       {
        tgo++;
@@ -263,12 +265,12 @@ CPWindow1::thread1_EvThreadRun(CControl*)
       {
        tgo = 0;
       }
+#endif     
 #ifdef TDEBUG      
      printf ("PTime= %lf  tgo= %2i  zeroc= %2i  Timer= %3u Perc.= %4.1lf\n",
              t1 - t0, tgo, zerocount, Window1.timer1.GetTime (),
              (t1 - t0) / (Window1.timer1.GetTime ()*1e-5));
 #endif
-#endif     
     }
    else
     {
@@ -300,6 +302,9 @@ CPWindow1::thread2_EvThreadRun(CControl*)
 void
 CPWindow1::timer2_EvOnTime(CControl * control)
 {
+ //avoid run again before terminate previous
+ if (status.st[0] & ST_T2)return;
+
  status.st[0] |= ST_T2;
  if (pboard != NULL)
   {
@@ -327,13 +332,14 @@ CPWindow1::timer2_EvOnTime(CControl * control)
 
  label2.SetText (lxString ().Format ("Spd: %3.2fx", 100.0 / timer1.GetTime ()));
 
- status.st[0] &= ~ST_T2;
 
- if (error & ERR_VERSION)
+ if (Errors.GetLinesCount ())
   {
-   error &= ~ERR_VERSION;
-   Message_sz ("The loaded workspace was made with a newer version " + pzw_ver + ".\n Please update your PICSimLab " _VERSION_ " .", 450, 200);
+   Message_sz (Errors.GetLine (0), 450, 200);
+   Errors.DelLine (0);
   }
+
+ status.st[0] &= ~ST_T2;
 
 #ifdef CONVERTER_MODE
  if (cvt_fname.Length () > 3)
@@ -404,106 +410,101 @@ CPWindow1::_EvOnCreate(CControl * control)
 
  strncpy (home, (char*) lxGetUserDataDir (lxT ("picsimlab")).char_str (), 1023);
 
+ HOME = home;
 
- if (!create)
+ PATH = lxGetCwd ();
+
+ share = dirname (lxGetExecutablePath ()) + lxT ("/") + lxString (_SHARE_);
+
+ if (Application->Aargc == 2)
   {
-   PATH = lxGetCwd ();
-
-   share = dirname (lxGetExecutablePath ()) + lxT ("/") + lxString (_SHARE_);
-
-   if (Application->Aargc == 2)
-    {
-     fn.Assign (Application->Aargv[1]);
-     fn.MakeAbsolute ();
-     use_default_board = 1;
-    }
-   else if ((Application->Aargc >= 3) && (Application->Aargc <= 5))
-    {
-     char fname[1200];
-
-     if (Application->Aargc >= 4)
-      {
-       fn.Assign (Application->Aargv[3]);
-       fn.MakeAbsolute ();
-      }
-     if (Application->Aargc == 5)
-      {
-       fn_spare.Assign (Application->Aargv[4]);
-       fn_spare.MakeAbsolute ();
-      }
-     lab = -1;
-     for (int i = 0; i < BOARDS_LAST; i++)
-      {
-       if (!strcmp (boards_list[i].name_, Application->Aargv[1]))
-        {
-         lab = i;
-         break;
-        }
-      }
-
-     if (lab != -1)
-      {
-       snprintf (fname, 1199, "%s/picsimlab.ini", home);
-       prefs.Clear ();
-       if (lxFileExists (fname))
-        {
-         if (prefs.LoadFromFile (fname))
-          {
-           saveprefs (lxT ("picsimlab_lab"), boards_list[lab].name_);
-           saveprefs (lxString (boards_list[lab].name_) + lxT ("_proc"), Application->Aargv[2]);
-           if (Application->Aargc == 5)
-            {
-             saveprefs (lxT ("spare_on"), lxT ("1"));
-            }
-           prefs.SaveToFile (fname);
-          }
-        }
-      }
-     else
-      {
-       Application->Aargc = 1;
-       printf ("PICSimLab: Unknown board %s !\n", Application->Aargv[1]);
-      }
-    }
+   fn.Assign (Application->Aargv[1]);
+   fn.MakeAbsolute ();
+   use_default_board = 1;
   }
-
- //load options
- Configure (control, home, use_default_board);
-
- if (!create)
+ else if ((Application->Aargc >= 3) && (Application->Aargc <= 5))
   {
-   //search for file name 
-   if (Application->Aargc == 2)
-    {
-     LoadWorkspace (fn.GetFullPath ());
-    }
-   else if ((Application->Aargc == 4) || (Application->Aargc == 5))
-    {
-     LoadHexFile (fn.GetFullPath ());
-     if (Application->Aargc == 5)
-      {
-       Window5.LoadConfig (fn_spare.GetFullPath ());
-      }
-    }
+   char fname[1200];
 
-   //board menu
+   if (Application->Aargc >= 4)
+    {
+     fn.Assign (Application->Aargv[3]);
+     fn.MakeAbsolute ();
+    }
+   if (Application->Aargc == 5)
+    {
+     fn_spare.Assign (Application->Aargv[4]);
+     fn_spare.MakeAbsolute ();
+    }
+   lab = -1;
    for (int i = 0; i < BOARDS_LAST; i++)
     {
-     MBoard[i].SetFOwner (this);
-     MBoard[i].SetName (itoa (i));
-     MBoard[i].SetText (boards_list[i].name);
-     MBoard[i].EvMenuActive = EVMENUACTIVE & CPWindow1::menu1_EvBoard;
-     menu1_Board.CreateChild (&MBoard[i]);
+     if (!strcmp (boards_list[i].name_, Application->Aargv[1]))
+      {
+       lab = i;
+       break;
+      }
+    }
+
+   if (lab != -1)
+    {
+     snprintf (fname, 1199, "%s/picsimlab.ini", home);
+     prefs.Clear ();
+     if (lxFileExists (fname))
+      {
+       if (prefs.LoadFromFile (fname))
+        {
+         saveprefs (lxT ("picsimlab_lab"), boards_list[lab].name_);
+         saveprefs (lxString (boards_list[lab].name_) + lxT ("_proc"), Application->Aargv[2]);
+         if (Application->Aargc == 5)
+          {
+           saveprefs (lxT ("spare_on"), lxT ("1"));
+          }
+         prefs.SaveToFile (fname);
+        }
+      }
+    }
+   else
+    {
+     Application->Aargc = 1;
+     printf ("PICSimLab: Unknown board %s !\n", Application->Aargv[1]);
     }
   }
- create++;
-#ifndef __EMSCRIPTEN__
- rcontrol_init (remotec_port);
-#endif 
+
+
+ //load options
+ Configure (home, use_default_board, 1);
+
+
+ //search for file name 
+ if (Application->Aargc == 2)
+  {
+   LoadWorkspace (fn.GetFullPath ());
+  }
+ else if ((Application->Aargc == 4) || (Application->Aargc == 5))
+  {
+   LoadHexFile (fn.GetFullPath ());
+   if (Application->Aargc == 5)
+    {
+     Window5.LoadConfig (fn_spare.GetFullPath ());
+    }
+  }
+
+ //board menu
+ for (int i = 0; i < BOARDS_LAST; i++)
+  {
+   MBoard[i].SetFOwner (this);
+   MBoard[i].SetName (itoa (i));
+   MBoard[i].SetText (boards_list[i].name);
+   MBoard[i].EvMenuActive = EVMENUACTIVE & CPWindow1::menu1_EvBoard;
+   menu1_Board.CreateChild (&MBoard[i]);
+  }
+
+
 }
 
 void
-CPWindow1::Configure(CControl * control, const char * home, int use_default_board)
+CPWindow1::Configure(const char * home, int use_default_board, int create)
 {
 
  char line[1024];
@@ -586,7 +587,6 @@ CPWindow1::Configure(CControl * control, const char * home, int use_default_boar
           }
 
          pboard = create_board (&lab, &lab_);
-         pboard->SetName (boards_list[lab].name);
          if (pboard->GetScale () < scale)
           {
            scale = pboard->GetScale ();
@@ -640,7 +640,7 @@ CPWindow1::Configure(CControl * control, const char * home, int use_default_boar
 
        if (!strcmp (name, "picsimlab_scale"))
         {
-         if (!create)
+         if (create)
           {
            sscanf (value, "%lf", &scale);
            draw1.SetWidth (plWidth * scale);
@@ -810,6 +810,9 @@ CPWindow1::Configure(CControl * control, const char * home, int use_default_boar
    menu1_Tools_ArduinoBootloader.SetEnable (false);
   }
 
+#ifndef __EMSCRIPTEN__
+ rcontrol_init (remotec_port);
+#endif 
 }
 
 //Change  frequency
@@ -861,6 +864,14 @@ CPWindow1::saveprefs(lxString name, lxString value)
 
 void
 CPWindow1::_EvOnDestroy(CControl * control)
+{
+ rcontrol_server_end ();
+ pboard->EndServers ();
+ EndSimulation ();
+}
+
+void
+CPWindow1::EndSimulation(void)
 {
  char home[1024];
  char fname[1280];
@@ -1057,7 +1068,9 @@ CPWindow1::menu1_Help_Contents_EvMenuActive(CControl * control)
 {
 #ifdef EXT_BROWSER
  //lxLaunchDefaultBrowser(lxT("file://")+share + lxT ("docs/picsimlab.html"));
- lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_docs/"));
+ lxString stemp;
+ stemp.Printf (lxT ("https://lcgamboa.github.io/picsimlab_docs/%s/index.html"), lxT (_VERSION_));
+ lxLaunchDefaultBrowser (stemp);
 #else 
  Window2.html1.SetLoadFile (share + lxT ("docs/picsimlab.html"));
  Window2.Show ();
@@ -1067,9 +1080,19 @@ CPWindow1::menu1_Help_Contents_EvMenuActive(CControl * control)
 void
 CPWindow1::menu1_Help_Board_EvMenuActive(CControl * control)
 {
- lxString bname = lxString (boards_list[lab].name_).substr (0, 12);
+ char bname[20];
+ strncpy (bname, boards_list[lab].name_, 12);
 
- lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_docs/Features_Board_") + bname + lxT (".html"));
+ char * ptr;
+ //remove _ from names
+ while ((ptr = strchr (bname, '_')))
+  {
+   strcpy (ptr, ptr + 1);
+  }
+
+ lxString stemp;
+ stemp.Printf (lxT ("https://lcgamboa.github.io/picsimlab_docs/%s/%s.html"), lxT (_VERSION_), bname);
+ lxLaunchDefaultBrowser (stemp);
 }
 
 void
@@ -1241,9 +1264,9 @@ CPWindow1::menu1_EvBoard(CControl * control)
  lab = atoi (((CItemMenu*) control)->GetName ());
 
  FNAME = lxT (" ");
- _EvOnDestroy (control);
- _EvOnCreate (control);
- _EvOnShow (control);
+ EndSimulation ();
+ Configure (HOME);
+ need_resize = 0;
 }
 
 //change microcontroller
@@ -1257,9 +1280,9 @@ CPWindow1::menu1_EvMicrocontroller(CControl * control)
  SetTitle (lxT ("PICSimLab - ") + lxString (boards_list[lab].name) + lxT (" - ") + pboard->GetProcessorName ());
 
  FNAME = lxT (" ");
- _EvOnDestroy (control);
- _EvOnCreate (control);
- _EvOnShow (control);
+ EndSimulation ();
+ Configure (HOME);
+ need_resize = 0;
 }
 
 void
@@ -1270,9 +1293,9 @@ CPWindow1::togglebutton1_EvOnToggleButton(CControl * control)
 
  debug = togglebutton1.GetCheck ();
 
- _EvOnDestroy (control);
- _EvOnCreate (control);
- _EvOnShow (control);
+ EndSimulation ();
+ Configure (HOME);
+ need_resize = 0;
 
  if (osc_on) menu1_Modules_Oscilloscope_EvMenuActive (this);
  if (spare_on) menu1_Modules_Spareparts_EvMenuActive (this);
@@ -1323,7 +1346,7 @@ CPWindow1::LoadWorkspace(lxString fnpzw)
 
  lxUnzipDir (fnpzw, fzip);
 
- _EvOnDestroy (this);
+ EndSimulation ();
 
  snprintf (fzip, 1279, "%s/picsimlab.ini", home);
  lxStringList prefsw;
@@ -1364,7 +1387,7 @@ CPWindow1::LoadWorkspace(lxString fnpzw)
        if (ser_ > ser)
         {
          printf ("PICSimLab: .pzw file version %i newer than PICSimLab %i!\n", ser_, ser);
-         error |= ERR_VERSION;
+         RegisterError ("The loaded workspace was made with a newer version " + pzw_ver + ".\n Please update your PICSimLab " _VERSION_ " .");
         }
 
        continue;
@@ -1503,9 +1526,9 @@ CPWindow1::LoadWorkspace(lxString fnpzw)
   }
  prefs.SaveToFile (fzip);
 
- Configure (this, home);
+ Configure (home);
 
- _EvOnShow (this);
+ need_resize = 0;
 
 #ifdef CONVERTER_MODE
  fnpzw.replace (fnpzw.Length () - 4, 5, "_.pzw");
@@ -1693,7 +1716,7 @@ CPWindow1::menu1_Tools_SerialTerm_EvMenuActive(CControl * control)
 #else
  //lxExecute (dirname(lxGetExecutablePath ())+"/cutecom", lxEXEC_MAKE_GROUP_LEADER);
  //using system binary
- lxExecute ("cutecom", lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute ("cutecom");
 
  if (!(lxFileExists (dirname (lxGetExecutablePath ()) + "/cutecom")
        || lxFileExists ("/usr/bin/cutecom")
@@ -1712,7 +1735,7 @@ CPWindow1::menu1_Tools_SerialRemoteTank_EvMenuActive(CControl * control)
  lxExecute (share + lxT ("/../srtank.exe"));
 #else
 
- lxExecute (dirname (lxGetExecutablePath ()) + "/srtank", lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute (dirname (lxGetExecutablePath ()) + "/srtank");
 #endif  
 }
 
@@ -1722,7 +1745,7 @@ CPWindow1::menu1_Tools_Esp8266ModemSimulator_EvMenuActive(CControl * control)
 #ifdef _WIN_  
  lxExecute (share + lxT ("/../espmsim.exe"));
 #else
- lxExecute (dirname (lxGetExecutablePath ()) + "/espmsim", lxEXEC_MAKE_GROUP_LEADER);
+ lxExecute (dirname (lxGetExecutablePath ()) + "/espmsim");
 #endif  
 }
 
@@ -1736,6 +1759,16 @@ void
 CPWindow1::menu1_Tools_MPLABXDebuggerPlugin_EvMenuActive(CControl * control)
 {
  lxLaunchDefaultBrowser (lxT ("https://github.com/lcgamboa/picsimlab_md/releases"));
+}
+
+void
+CPWindow1::menu1_Tools_PinViewer_EvMenuActive(CControl * control)
+{
+#ifdef _WIN_  
+ lxExecute (share + lxT ("/../PinViewer.exe " + itoa (remotec_port)));
+#else
+ lxExecute (dirname (lxGetExecutablePath ()) + "/PinViewer " + itoa (remotec_port));
+#endif  
 }
 
 void
@@ -1865,3 +1898,9 @@ extern "C"
  }
 }
 #endif
+
+void
+CPWindow1::RegisterError(const lxString error)
+{
+ Errors.AddLine (error);
+}
