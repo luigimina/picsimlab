@@ -100,6 +100,7 @@ rcontrol_init(unsigned short tcpport)
    if (bind (listenfd, (sockaddr *) & serv, sizeof (serv)) < 0)
     {
      printf ("rcontrol: bind error : %s \n", strerror (errno));
+     Window1.RegisterError (lxString ().Format ("Can't open rcontrol TCP port %i\n It is already in use by another application!",tcpport));
      return 1;
     }
 
@@ -257,7 +258,7 @@ ProcessInput(const char * msg, input_t * Input, int * ret)
  LD - led
  DS - Display LCD
  MT - DC motor
- GD - step and servo angles
+ DG - step and servo angles
  SS - seven sgments 
  */
 
@@ -399,7 +400,7 @@ rcontrol_loop(void)
 
    if (strchr (buffer, '\n'))
     {
-     char cmd[100];
+     char cmd[BSIZE];
      int cmdsize = 0;
 
      while (buffer[cmdsize] != '\n')
@@ -420,8 +421,7 @@ rcontrol_loop(void)
        cmd[cmdsize - 1] = 0; //strip \r  
       }
 
-     strcpy (cmd, (const char *) lowercase (cmd).c_str ());
-
+     //strcpy (cmd, (const char *) lowercase (cmd).c_str ());
 
      dprint ("cmd[%s]\n", cmd);
 
@@ -841,11 +841,13 @@ rcontrol_loop(void)
          ret += sendtext ("  get ob       - get object value\r\n");
          ret += sendtext ("  help         - show this message\r\n");
          ret += sendtext ("  info         - show actual setup info and objects\r\n");
+         ret += sendtext ("  loadhex file - load hex file (use full path)\r\n");
          ret += sendtext ("  pins         - show pins directions and values\r\n");
          ret += sendtext ("  pinsl        - show pins formated info\r\n");
          ret += sendtext ("  quit         - exit remote control interface\r\n");
          ret += sendtext ("  reset        - reset the board\r\n");
          ret += sendtext ("  set ob vl    - set object with value\r\n");
+         ret += sendtext ("  sim [cmd]    - show simulation status or execute cmd start/stop\r\n");
          ret += sendtext ("  sync         - wait to syncronize with timer event\r\n");
          ret += sendtext ("  version      - show PICSimLab version\r\n");
 
@@ -919,6 +921,33 @@ rcontrol_loop(void)
             }
           }
          ret += sendtext ("Ok\r\n>");
+        }
+       else
+        {
+         ret = sendtext ("ERROR\r\n>");
+        }
+       break;
+      case 'l':
+       if (!strncmp (cmd, "loadhex", 7))
+        {
+         //Command loadhex ========================================================
+         char * ptr;
+         if ((ptr = strchr (cmd, '\r')))
+          {
+           ptr[0] = 0;
+          }
+         if ((ptr = strchr (cmd, '\n')))
+          {
+           ptr[0] = 0;
+          }
+         if (Window1.LoadHexFile (cmd + 8))
+          {
+           ret += sendtext ("ERROR\r\n>");
+          }
+         else
+          {
+           ret += sendtext ("Ok\r\n>");
+          }
         }
        else
         {
@@ -1017,6 +1046,10 @@ rcontrol_loop(void)
               {
                *((unsigned char *) Input->status) = value;
                sendtext ("Ok\r\n>");
+               if (Input->update)
+                {
+                 *Input->update = 1;
+                }
               }
              else
               {
@@ -1126,7 +1159,36 @@ rcontrol_loop(void)
           }
          return 0;
         }
-       if (!strcmp (cmd, "sync"))
+       else if (!strncmp (cmd, "sim", 3))
+        {
+         //Command sim =====================================================
+         Window1.SetSync (0);
+
+         if (strstr (cmd + 3, "stop"))
+          {
+           Window1.SetSimulationRun (0);
+           ret = sendtext ("Ok\r\n>");
+          }
+         else if (strstr (cmd + 3, "start"))
+          {
+           Window1.SetSimulationRun (1);
+           ret = sendtext ("Ok\r\n>");
+          }
+         else
+          {
+           if (Window1.GetSimulationRun ())
+            {
+             
+             ret = sendtext (lxString ().Format ("Simulation running %5.2fx\r\nOk\r\n>", 100.0 / Window1.timer1.GetTime ()));
+            }
+           else
+            {
+             ret = sendtext ("Simulation stopped\r\nOk\r\n>");
+            }
+          }
+
+        }
+       else if (!strcmp (cmd, "sync"))
         {
          //Command sync =====================================================
          Window1.SetSync (0);

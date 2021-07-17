@@ -36,8 +36,8 @@ enum
  I_ICSP, //ICSP connector
  I_PWR, //Power button
  I_RST, //Reset button
- I_D0, //RD0 push button
- I_D1 //RD1 switch
+ I_BD0, //RD0 push button
+ I_SD1 //RD1 switch
 };
 
 /* ids of outputs of output map*/
@@ -63,8 +63,8 @@ cboard_x::get_in_id(char * name)
  if (strcmp (name, "PG_ICSP") == 0)return I_ICSP;
  if (strcmp (name, "SW_PWR") == 0)return I_PWR;
  if (strcmp (name, "PB_RST") == 0)return I_RST;
- if (strcmp (name, "PB_D0") == 0)return I_D0;
- if (strcmp (name, "SW_D1") == 0)return I_D1;
+ if (strcmp (name, "PB_D0") == 0)return I_BD0;
+ if (strcmp (name, "SW_D1") == 0)return I_SD1;
  if (strcmp (name, "PO_1") == 0)return I_POT1;
 
  printf ("Error input '%s' don't have a valid id! \n", name);
@@ -86,7 +86,7 @@ cboard_x::get_out_id(char * name)
  if (strcmp (name, "PB_D0") == 0)return O_BD0;
  if (strcmp (name, "PO_1") == 0)return O_POT1;
  if (strcmp (name, "PB_RST") == 0)return O_RST;
- if (strcmp (name, "MP_CPU") == 0)return O_CPU;
+ if (strcmp (name, "IC_CPU") == 0)return O_CPU;
 
  printf ("Error output '%s' don't have a valid id! \n", name);
  return 1;
@@ -211,40 +211,21 @@ cboard_x::Reset(void)
 void
 cboard_x::RegisterRemoteControl(void)
 {
- for (int i = 0; i < inputc; i++)
-  {
-   switch (input[i].id)
-    {
-    case I_D0:
-     input[i].status = &p_BT1;
-     break;
-    case I_D1:
-     input[i].status = &p_BT2;
-     break;
-    case I_POT1:
-     input[i].status = &pot1;
-     break;
-    }
-  }
+ //register inputa
+ input_ids[I_BD0]->status = &p_BT1;
+ input_ids[I_SD1]->status = &p_BT2;
+ input_ids[I_POT1]->status = &pot1;
 
- for (int i = 0; i < outputc; i++)
-  {
-   switch (output[i].id)
-    {
-    case O_RB0:
-     output[i].status = &pic.pins[32].oavalue;
-     break;
-    case O_RB1:
-     output[i].status = &pic.pins[33].oavalue;
-     break;
-    case O_LD0:
-     output[i].status = &pic.pins[18].oavalue;
-     break;
-    case O_LD1:
-     output[i].status = &pic.pins[19].oavalue;
-     break;
-    }
-  }
+ //register output to be updated on input change
+ input_ids[I_BD0]->update = &output_ids[O_BD0]->update;
+ input_ids[I_SD1]->update = &output_ids[O_SD1]->update;
+ input_ids[I_POT1]->update = &output_ids[O_POT1]->update;
+
+ //register outputa
+ output_ids[O_RB0]->status = &pic.pins[32].oavalue;
+ output_ids[O_RB1]->status = &pic.pins[33].oavalue;
+ output_ids[O_LD0]->status = &pic.pins[18].oavalue;
+ output_ids[O_LD1]->status = &pic.pins[19].oavalue;
 }
 
 //Called ever 1s to refresh status
@@ -401,12 +382,12 @@ cboard_x::EvMouseButtonPress(uint button, uint x, uint y, uint state)
        output_ids[O_RST]->update = 1;
        break;
        //if event is over I_D0 area then activate button (state=0) 
-      case I_D0:
+      case I_BD0:
        p_BT1 = 0;
        output_ids[O_BD0]->update = 1;
        break;
        //if event is over I_D1 area then toggle switch state   
-      case I_D1:
+      case I_SD1:
        p_BT2 ^= 1;
        output_ids[O_SD1]->update = 1;
        break;
@@ -481,7 +462,7 @@ cboard_x::EvMouseButtonRelease(uint button, uint x, uint y, uint state)
        output_ids[O_RST]->update = 1;
        break;
        //if event is over I_D0 area then deactivate button (state=1) 
-      case I_D0:
+      case I_BD0:
        p_BT1 = 1;
        output_ids[O_BD0]->update = 1;
        break;
@@ -661,9 +642,9 @@ cboard_x::Run_CPU(void)
  const picpin * pins;
  unsigned int alm[40];
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- long int NSTEP = Window1.GetNSTEP () / MGetPinCount (); //number of steps in 100ms
-
+ const int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
+ const long int NSTEP = Window1.GetNSTEP (); //number of steps in 100ms
+ const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
  //reset pins mean value
  memset (alm, 0, 40 * sizeof (unsigned int));
@@ -675,8 +656,9 @@ cboard_x::Run_CPU(void)
  if (use_spare)Window5.PreProcess ();
 
  j = JUMPSTEPS; //step counter
+ pi = 0;
  if (Window1.Get_mcupwr ()) //if powered
-  for (i = 0; i < Window1.GetNSTEP (); i++) //repeat for number of steps in 100ms
+  for (i = 0; i < NSTEP; i++) //repeat for number of steps in 100ms
    {
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
@@ -694,7 +676,9 @@ cboard_x::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pic.PINCOUNT)pi = 0;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
@@ -710,7 +694,7 @@ cboard_x::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < pic.PINCOUNT; pi++)
   {
-   pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
+   pic.pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
   }
 
  //Spare parts window pre post process

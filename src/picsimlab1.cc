@@ -71,7 +71,7 @@ usleep(unsigned int usec)
  HANDLE timer;
  LARGE_INTEGER ft;
 
- ft.QuadPart = -(10 * (__int64)usec);
+ ft.QuadPart = -(10 * (__int64) usec);
 
  timer = CreateWaitableTimer (NULL, TRUE, NULL);
  SetWaitableTimer (timer, &ft, 0, NULL, NULL, 0);
@@ -119,14 +119,27 @@ cpuTime()
 #endif
 #endif
 
+extern "C"
+{
+ void file_ready(const char *fname, const char * dir = NULL);
+}
+
 void
 CPWindow1::timer1_EvOnTime(CControl * control)
 {
+
+ //avoid run again before terminate previous
+ if (status.st[0] & (ST_T1 | ST_DI))return;
+
  sync = 1;
  status.st[0] |= ST_T1;
 
-
+#ifdef _NOTHREAD
+ //printf ("overtimer = %i \n", timer1.GetOverTime ());
+ if (timer1.GetOverTime () < 100)
+#else 
  if ((!tgo)&&(timer1.GetTime () == 100))
+#endif  
   {
    if (crt)
     {
@@ -177,7 +190,16 @@ CPWindow1::timer1_EvOnTime(CControl * control)
    tgo = 1;
   }
 
- if (need_resize == 1)
+ DrawBoard ();
+
+ status.st[0] &= ~ST_T1;
+}
+
+void
+CPWindow1::DrawBoard(void)
+{
+
+ if (need_resize)
   {
    double scalex, scaley, scale_temp;
 
@@ -209,11 +231,14 @@ CPWindow1::timer1_EvOnTime(CControl * control)
      draw1.SetWidth (nw);
      draw1.SetHeight (nh);
 
-     draw1.SetImgFileName (share + lxT ("boards/") + pboard->GetPictureFileName (), scale, scale);
+     draw1.SetImgFileName (lxGetLocalFile (share + lxT ("boards/") + pboard->GetPictureFileName ()), scale, scale);
     }
 
-   pboard->SetScale (scale);
-   pboard->EvOnShow ();
+   if (pboard)
+    {
+     pboard->SetScale (scale);
+     pboard->EvOnShow ();
+    }
 
    if (osc_on)
     {
@@ -225,19 +250,19 @@ CPWindow1::timer1_EvOnTime(CControl * control)
      menu1_Modules_Spareparts_EvMenuActive (this);
      spare_on = 0;
     }
+   need_resize = 0;
   }
 
- need_resize++;
-
- pboard->Draw (&draw1);
-
- status.st[0] &= ~ST_T1;
+ if (pboard)
+  {
+   pboard->Draw (&draw1);
+  }
 }
 
 void
 CPWindow1::thread1_EvThreadRun(CControl*)
 {
-#if defined(TDEBUG) || defined(_NOTHREAD)  
+#if defined(TDEBUG) //|| defined(_NOTHREAD)  
  double t0, t1;
 #endif
  do
@@ -245,7 +270,7 @@ CPWindow1::thread1_EvThreadRun(CControl*)
 
    if (tgo)
     {
-#if defined(TDEBUG) || defined(_NOTHREAD)     
+#if defined(TDEBUG) //|| defined(_NOTHREAD)     
      t0 = cpuTime ();
 #endif     
      status.st[1] |= ST_TH;
@@ -253,10 +278,11 @@ CPWindow1::thread1_EvThreadRun(CControl*)
      if (debug)pboard->DebugLoop ();
      tgo--;
      status.st[1] &= ~ST_TH;
-#if defined(TDEBUG) || defined(_NOTHREAD)       
+#if defined(TDEBUG) //|| defined(_NOTHREAD)       
      t1 = cpuTime ();
 #endif     
 #if defined(_NOTHREAD)     
+     /*
      if ((t1 - t0) / (Window1.timer1.GetTime ()*1e-5) > 110)
       {
        tgo++;
@@ -265,6 +291,8 @@ CPWindow1::thread1_EvThreadRun(CControl*)
       {
        tgo = 0;
       }
+      */
+     tgo = 0;
 #endif     
 #ifdef TDEBUG      
      printf ("PTime= %lf  tgo= %2i  zeroc= %2i  Timer= %3u Perc.= %4.1lf\n",
@@ -303,7 +331,7 @@ void
 CPWindow1::timer2_EvOnTime(CControl * control)
 {
  //avoid run again before terminate previous
- if (status.st[0] & ST_T2)return;
+ if (status.st[0] & (ST_T2 | ST_DI))return;
 
  status.st[0] |= ST_T2;
  if (pboard != NULL)
@@ -414,7 +442,14 @@ CPWindow1::_EvOnCreate(CControl * control)
 
  PATH = lxGetCwd ();
 
- share = dirname (lxGetExecutablePath ()) + lxT ("/") + lxString (_SHARE_);
+ if (lxString (_SHARE_).Contains ("http"))
+  {
+   share = lxString (_SHARE_);
+  }
+ else
+  {
+   share = dirname (lxGetExecutablePath ()) + lxT ("/") + lxString (_SHARE_);
+  }
 
  if (Application->Aargc == 2)
   {
@@ -584,6 +619,10 @@ CPWindow1::Configure(const char * home, int use_default_board, int create)
             }
            lab = i;
            lab_ = i;
+           if (lab == BOARDS_LAST)
+            {
+             RegisterError (lxString ("Invalid board ") + value + "!\n Using default board!");
+            }
           }
 
          pboard = create_board (&lab, &lab_);
@@ -601,8 +640,12 @@ CPWindow1::Configure(const char * home, int use_default_board, int create)
 
        if (!strcmp (name, "picsimlab_debug"))
         {
+#ifdef NO_DEBUG
+         debug = 0;
+#else         
          sscanf (value, "%i", &debug);
          togglebutton1.SetCheck (debug);
+#endif         
         }
 
        if (!strcmp (name, "picsimlab_debugt"))
@@ -724,7 +767,7 @@ CPWindow1::Configure(const char * home, int use_default_board, int create)
  filedialog1.SetDir (PATH);
 
 
- draw1.SetImgFileName (share + lxT ("boards/") + pboard->GetPictureFileName (), scale, scale);
+ draw1.SetImgFileName (lxGetLocalFile (share + lxT ("boards/") + pboard->GetPictureFileName ()), scale, scale);
 
  pboard->MSetSerial (SERIALDEVICE);
 
@@ -876,7 +919,7 @@ CPWindow1::EndSimulation(void)
  char home[1024];
  char fname[1280];
 
-
+ SetSimulationRun (1);
  Window4.Hide ();
  Window5.Hide ();
 #ifndef __EMSCRIPTEN__
@@ -1080,14 +1123,14 @@ CPWindow1::menu1_Help_Contents_EvMenuActive(CControl * control)
 void
 CPWindow1::menu1_Help_Board_EvMenuActive(CControl * control)
 {
- char bname[20];
- strncpy (bname, boards_list[lab].name_, 12);
+ char bname[30];
+ strncpy (bname, boards_list[lab].name_, 29);
 
  char * ptr;
  //remove _ from names
  while ((ptr = strchr (bname, '_')))
   {
-   strcpy (ptr, ptr + 1);
+   memmove (ptr, ptr + 1, strlen (ptr) + 1);
   }
 
  lxString stemp;
@@ -1115,8 +1158,8 @@ CPWindow1::menu1_Help_Examples_EvMenuActive(CControl * control)
 
 #ifdef EXT_BROWSER_EXAMPLES
  //lxLaunchDefaultBrowser(lxT("file://")+share + lxT ("docs/picsimlab.html"));
- lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_examples/examples/examples_index.html#board_" + lxString (boards_list[lab].name_) + lxT ("_") + pboard->GetProcessorName ()));
- WDestroy ();
+ lxLaunchDefaultBrowser (lxT ("https://lcgamboa.github.io/picsimlab_examples/board_" + lxString (boards_list[lab].name_) + ".html#board_" + lxString (boards_list[lab].name_) + lxT ("_") + pboard->GetProcessorName ()));
+ SetToDestroy ();
 #else 
  OldPath = filedialog2.GetDir ();
 
@@ -1132,7 +1175,18 @@ CPWindow1::menu1_Help_Examples_EvMenuActive(CControl * control)
 void
 CPWindow1::_EvOnShow(CControl * control)
 {
- need_resize = 0;
+ need_resize = 1;
+ if (!GetSimulationRun ())
+  {
+   DrawBoard ();
+  }
+}
+
+void
+CPWindow1::_EvOnDropFile(CControl * control, const lxString fname)
+{
+ printf ("PICSimLab: File droped: %s\n", (const char *) fname.c_str ());
+ file_ready (basename (fname), dirname (fname));
 }
 
 void
@@ -1141,17 +1195,20 @@ CPWindow1::menu1_File_Configure_EvMenuActive(CControl * control)
  Window3.ShowExclusive ();
 }
 
-void
+int
 CPWindow1::LoadHexFile(lxString fname)
 {
  int pa;
+ int ret = 0;
 
  pa = mcupwr;
  mcupwr = 0;
 
- timer1.SetRunState (0);
+ //timer1.SetRunState (0);
+ status.st[0] |= ST_DI;
  msleep (100);
- while (status.status & 0x41)
+ if (tgo)tgo = 1;
+ while (status.status & 0x0401)
   {
    msleep (1);
    Application->ProcessEvents ();
@@ -1163,11 +1220,11 @@ CPWindow1::LoadHexFile(lxString fname)
  switch (pboard->MInit (pboard->GetProcessorName (), fname.char_str (), NSTEP * NSTEPKF))
   {
   case HEX_NFOUND:
-   Message (lxT ("File not found!"));
+   RegisterError (lxT ("Hex file not found!"));
    mcurun = 0;
    break;
   case HEX_CHKSUM:
-   Message (lxT ("File checksum error!"));
+   RegisterError (lxT ("Hex file checksum error!"));
    pboard->MEraseFlash ();
    mcurun = 0;
    break;
@@ -1184,9 +1241,11 @@ CPWindow1::LoadHexFile(lxString fname)
  else
   SetTitle (lxT ("PICSimLab - ") + lxString (boards_list[lab].name) + lxT (" - ") + pboard->GetProcessorName ());
 
+ ret = !mcurun;
 
  mcupwr = pa;
- timer1.SetRunState (1);
+ //timer1.SetRunState (1);
+ status.st[0] &= ~ST_DI;
 
 #ifdef NO_DEBUG
  statusbar1.SetField (1, lxT (" "));
@@ -1208,6 +1267,8 @@ CPWindow1::LoadHexFile(lxString fname)
    statusbar1.SetField (1, lxT ("Debug: Off"));
   }
 #endif
+
+ return ret;
 }
 
 void
@@ -1266,7 +1327,7 @@ CPWindow1::menu1_EvBoard(CControl * control)
  FNAME = lxT (" ");
  EndSimulation ();
  Configure (HOME);
- need_resize = 0;
+ need_resize = 1;
 }
 
 //change microcontroller
@@ -1282,7 +1343,7 @@ CPWindow1::menu1_EvMicrocontroller(CControl * control)
  FNAME = lxT (" ");
  EndSimulation ();
  Configure (HOME);
- need_resize = 0;
+ need_resize = 1;
 }
 
 void
@@ -1295,7 +1356,7 @@ CPWindow1::togglebutton1_EvOnToggleButton(CControl * control)
 
  EndSimulation ();
  Configure (HOME);
- need_resize = 0;
+ need_resize = 1;
 
  if (osc_on) menu1_Modules_Oscilloscope_EvMenuActive (this);
  if (spare_on) menu1_Modules_Spareparts_EvMenuActive (this);
@@ -1528,7 +1589,7 @@ CPWindow1::LoadWorkspace(lxString fnpzw)
 
  Configure (home);
 
- need_resize = 0;
+ need_resize = 1;
 
 #ifdef CONVERTER_MODE
  fnpzw.replace (fnpzw.Length () - 4, 5, "_.pzw");
@@ -1850,57 +1911,85 @@ CPWindow1::SetToDestroy(void)
  settodestroy = 1;
 }
 
+void
+CPWindow1::RegisterError(const lxString error)
+{
+ Errors.AddLine (error);
+}
 
-#ifdef __EMSCRIPTEN__
+void
+CPWindow1::SetSimulationRun(int run)
+{
+ if (run)
+  {
+   Window1.status.st[0] &= ~ST_DI;
+  }
+ else
+  {
+   Window1.status.st[0] |= ST_DI;
+  }
+}
+
+int
+CPWindow1::GetSimulationRun(void)
+{
+ return (Window1.status.st[0] & ST_DI) == 0;
+}
+
+
+//emscripten interface
+
 extern "C"
 {
 
  void
- file_ready(const char *fname)
+ file_ready(const char *fname, const char * dir)
  {
+  const char tmp[] = "/tmp";
+
+  if (!dir)
+   {
+    dir = tmp;
+   }
+
   if (strstr (fname, ".pzw"))
    {
-    printf ("Loading .pzw...\n");
+    printf ("PICSimLab: Loading .pzw...\n");
     Window1.filedialog2.SetType (lxFD_OPEN | lxFD_CHANGE_DIR);
-    Window1.filedialog2.SetDir ("/tmp/");
+    Window1.filedialog2.SetDir (dir);
     Window1.filedialog2.SetFileName (fname);
     Window1.filedialog2_EvOnClose (1);
    }
   else if (strstr (fname, ".hex"))
    {
-    printf ("Loading .hex...\n");
+    printf ("PICSimLab: Loading .hex...\n");
     Window1.filedialog1.SetType (lxFD_OPEN | lxFD_CHANGE_DIR);
-    Window1.filedialog1.SetDir ("/tmp/");
+    Window1.filedialog1.SetDir (dir);
     Window1.filedialog1.SetFileName (fname);
     Window1.filedialog1_EvOnClose (1);
    }
   else if (strstr (fname, ".pcf"))
    {
     char buff[1024];
-    strncpy (buff, "/tmp/", 1023);
+    strncpy (buff, dir, 1023);
     strncat (buff, fname, 1023);
-    printf ("Loading .pcf...\n");
+    printf ("PICSimLab: Loading .pcf...\n");
     Window5.LoadConfig (buff);
     Window1.menu1_Modules_Spareparts_EvMenuActive (&Window1);
    }
   else if (strstr (fname, ".ppa"))
    {
     char buff[1024];
-    strncpy (buff, "/tmp/", 1023);
+    strncpy (buff, dir, 1023);
     strncat (buff, fname, 1023);
-    printf ("Loading .ppa...\n");
+    printf ("PICSimLab: Loading .ppa...\n");
     Window5.LoadPinAlias (buff);
    }
   else
    {
-    printf ("Unknow file %s !!\n", fname);
+    printf ("PICSimLab: Unknow file type %s !!\n", fname);
    }
  }
-}
-#endif
 
-void
-CPWindow1::RegisterError(const lxString error)
-{
- Errors.AddLine (error);
+
 }

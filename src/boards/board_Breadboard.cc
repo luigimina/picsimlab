@@ -64,7 +64,7 @@ cboard_Breadboard::get_out_id(char * name)
 {
 
  if (strcmp (name, "LD_LPWR") == 0)return O_LPWR;
- if (strcmp (name, "MP_CPU") == 0)return O_MP;
+ if (strcmp (name, "IC_CPU") == 0)return O_MP;
  if (strcmp (name, "PB_RST") == 0)return O_RST;
 
  printf ("Erro output '%s' don't have a valid id! \n", name);
@@ -81,7 +81,7 @@ font(10, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  ReadMaps (); //Read input and output board maps
 
  lxImage image (&Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic40.svg"), 0, Scale, Scale, 1);
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic40.svg")), 0, Scale, Scale, 1);
  micbmp = new lxBitmap (&image, &Window1);
 
 }
@@ -183,26 +183,29 @@ cboard_Breadboard::RefreshStatus(void)
     Window1.statusbar1.SetField (2, lxT ("Serial: ") +
                                  lxString::FromAscii (SERIALDEVICE) + lxT (" (ERROR)"));
 
-   switch (avr->state)
+   if (avr)
     {
-    case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
-     break;
-    case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
-     break;
-    case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
-     break;
-    case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
-     break;
-    case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
-     break;
-    case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
-     break;
-    case cpu_Done: Window1.SetCpuState (CPU_HALTED);
-     break;
-    case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
+     switch (avr->state)
+      {
+      case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
+       break;
+      case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
+       break;
+      case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
+       break;
+      case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
+       break;
+      case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
+       break;
+      case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
+       break;
+      case cpu_Done: Window1.SetCpuState (CPU_HALTED);
+       break;
+      case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
+       break;
+      }
      break;
     }
-   break;
   }
 
 }
@@ -365,7 +368,7 @@ cboard_Breadboard::Draw(CDraw *draw)
        draw->Canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
        break;
       case O_MP:
-       font.SetPointSize (((MGetPinCount () >= 44)||(MGetPinCount () <= 8) ) ? 6 : ((MGetPinCount () > 14) ? 12 : 10));
+       font.SetPointSize (((MGetPinCount () >= 44) || (MGetPinCount () <= 8)) ? 6 : ((MGetPinCount () > 14) ? 12 : 10));
        draw->Canvas.SetFont (font);
 
        ps = micbmp->GetSize ();
@@ -413,122 +416,131 @@ cboard_Breadboard::Run_CPU(void)
  unsigned char pi;
  const picpin * pins;
  unsigned int alm[100];
- int JUMPSTEPS = 0;
- long int NSTEP = 0;
 
  switch (ptype)
   {
   case _PIC:
+   {
+    const int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
+    const long int NSTEP = Window1.GetNSTEP (); //number of steps in 100ms
+    const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
-   JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
-   NSTEP = Window1.GetNSTEP () / pic.PINCOUNT; //number of steps in 100ms
-
-   //reset mean value
-   memset (alm, 0, 100 * sizeof (unsigned int));
+    //reset mean value
+    memset (alm, 0, 100 * sizeof (unsigned int));
 
 
-   //read pic.pins to a local variable to speed up 
-   pins = MGetPinsValues ();
-   if (use_spare)Window5.PreProcess ();
+    //read pic.pins to a local variable to speed up 
+    pins = MGetPinsValues ();
+    if (use_spare)Window5.PreProcess ();
 
-   j = JUMPSTEPS; //step counter
-   if (Window1.Get_mcupwr ()) //if powered
-    for (i = 0; i < Window1.GetNSTEP (); i++) //repeat for number of steps in 100ms
+    j = JUMPSTEPS; //step counter
+    pi = 0;
+    if (Window1.Get_mcupwr ()) //if powered
+     for (i = 0; i < NSTEP; i++) //repeat for number of steps in 100ms
+      {
+
+       if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
+        {
+         pic_set_pin (pic.mclr, p_RST);
+        }
+
+       //verify if a breakpoint is reached if not run one instruction 
+       if (!mplabxd_testbp ())pic_step ();
+       if (use_oscope)Window4.SetSample ();
+       if (use_spare)Window5.Process ();
+
+       //increment mean value counter if pin is high
+       alm[pi] += pins[pi].value;
+       pi++;
+       if (pi == pic.PINCOUNT)pi = 0;
+
+       if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
+        {
+         j = -1; //reset counter
+        }
+       j++; //counter increment
+      }
+    //calculate mean value
+    for (pi = 0; pi < MGetPinCount (); pi++)
      {
-
-      if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
-       {
-        pic_set_pin (pic.mclr, p_RST);
-       }
-
-      //verify if a breakpoint is reached if not run one instruction 
-      if (!mplabxd_testbp ())pic_step ();
-      if (use_oscope)Window4.SetSample ();
-      if (use_spare)Window5.Process ();
-
-      //increment mean value counter if pin is high
-      alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
-
-      if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
-       {
-        j = -1; //reset counter
-       }
-      j++; //counter increment
+      bsim_picsim::pic.pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
      }
-   //calculate mean value
-   for (pi = 0; pi < MGetPinCount (); pi++)
-    {
-     bsim_picsim::pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
-    }
-   if (use_spare)Window5.PostProcess ();
-   break;
+    if (use_spare)Window5.PostProcess ();
+    break;
+   }
   case _AVR:
+   {
+    const int pinc = bsim_simavr::MGetPinCount ();
+    //const int JUMPSTEPS = Window1.GetJUMPSTEPS ()*4.0; //number of steps skipped
+    const long int NSTEP = 4.0 * Window1.GetNSTEP (); //number of steps in 100ms
+    const float RNSTEP = 200.0 * pinc / NSTEP;
 
-   int pinc = bsim_simavr::MGetPinCount ();
-   JUMPSTEPS = Window1.GetJUMPSTEPS ()*4.0; //number of steps skipped
-   NSTEP = 4.0 * Window1.GetNSTEP () / pinc; //number of steps in 100ms
+    long long unsigned int cycle_start;
+    int twostep = 0;
 
-   long long unsigned int cycle_start;
-   int twostep = 0;
+    //reset mean value
 
-   //reset mean value
+    memset (alm, 0, pinc * sizeof (unsigned int));
 
-   memset (alm, 0, pinc * sizeof (unsigned int));
+    //read pic.pins to a local variable to speed up 
 
-   //read pic.pins to a local variable to speed up 
+    pins = bsim_simavr::MGetPinsValues ();
 
-   pins = bsim_simavr::MGetPinsValues ();
+    if (use_spare)Window5.PreProcess ();
 
-   if (use_spare)Window5.PreProcess ();
+    //j = JUMPSTEPS; //step counter
+    pi = 0;
+    if (Window1.Get_mcupwr ()) //if powered
+     for (i = 0; i < NSTEP; i++) //repeat for number of steps in 100ms
+      {
 
-   j = JUMPSTEPS; //step counter
-   if (Window1.Get_mcupwr ()) //if powered
-    for (i = 0; i < (Window1.GetNSTEP ()*4); i++) //repeat for number of steps in 100ms
+       //verify if a breakpoint is reached if not run one instruction 
+       if (avr_debug_type || (!mplabxd_testbp ()))
+        {
+         if (twostep)
+          {
+           twostep = 0; //NOP   
+          }
+         else
+          {
+           cycle_start = avr->cycle;
+           avr_run (avr);
+           if ((avr->cycle - cycle_start) > 1)
+            {
+             twostep = 1;
+            }
+          }
+        }
+       bsim_simavr::UpdateHardware ();
+
+       //avr->sleep_usec=0;
+       if (use_oscope)Window4.SetSample ();
+       if (use_spare)Window5.Process ();
+
+       //increment mean value counter if pin is high
+       alm[pi] += pins[pi].value;
+       pi++;
+       if (pi == pinc)pi = 0;
+       /*
+       if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
+        {
+         //set analog pin 2 (AN0) with value from scroll  
+         //pic_set_apin(2,((5.0*(scroll1->GetPosition()))/
+         //  (scroll1->GetRange()-1)));
+
+         j = -1; //reset counter
+        }
+       j++; //counter increment   
+        */
+      }
+    //calculate mean value
+    for (pi = 0; pi < MGetPinCount (); pi++)
      {
-
-      //verify if a breakpoint is reached if not run one instruction 
-      if (avr_debug_type || (!mplabxd_testbp ()))
-       {
-        if (twostep)
-         {
-          twostep = 0; //NOP   
-         }
-        else
-         {
-          cycle_start = avr->cycle;
-          avr_run (avr);
-          if ((avr->cycle - cycle_start) > 1)
-           {
-            twostep = 1;
-           }
-         }
-       }
-      bsim_simavr::UpdateHardware ();
-
-      //avr->sleep_usec=0;
-      if (use_oscope)Window4.SetSample ();
-      if (use_spare)Window5.Process ();
-
-      //increment mean value counter if pin is high
-      alm[i % pinc] += pins[i % pinc].value;
-
-      if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
-       {
-        //set analog pin 2 (AN0) with value from scroll  
-        //pic_set_apin(2,((5.0*(scroll1->GetPosition()))/
-        //  (scroll1->GetRange()-1)));
-
-        j = -1; //reset counter
-       }
-      j++; //counter increment   
+      bsim_simavr::pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
      }
-   //calculate mean value
-   for (pi = 0; pi < MGetPinCount (); pi++)
-    {
-     bsim_simavr::pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
-    }
-   if (use_spare)Window5.PostProcess ();
-   break;
+    if (use_spare)Window5.PostProcess ();
+    break;
+   }
   }
 
 
@@ -635,9 +647,9 @@ cboard_Breadboard::MInit(const char * processor, const char * fname, float freq)
  lxImage image (&Window1);
 
 
- if (!image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg"), 0, Scale, Scale, 1))
+ if (!image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg")), 0, Scale, Scale, 1))
   {
-   image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic6.svg"), 0, Scale, Scale, 1);
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic6.svg")), 0, Scale, Scale, 1);
    printf ("picsimlab: IC package with %i pins not found!\n", MGetPinCount ());
    printf ("picsimlab: %s not found!\n", (const char *) (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg")).c_str ());
   }
@@ -1105,16 +1117,16 @@ cboard_Breadboard::SetScale(double scale)
 
  if (MGetPinCount ())
   {
-   if (!image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg"), 0, Scale, Scale, 1))
+   if (!image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg")), 0, Scale, Scale, 1))
     {
-     image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic6.svg"), 0, Scale, Scale, 1);
+     image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic6.svg")), 0, Scale, Scale, 1);
      printf ("picsimlab: IC package with %i pins not found!\n", MGetPinCount ());
      printf ("picsimlab: %s not found!\n", (const char *) (Window1.GetSharePath () + lxT ("boards/Common/ic") + itoa (MGetPinCount ()) + lxT (".svg")).c_str ());
     }
   }
  else
   {
-   image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/ic40.svg"), 0, Scale, Scale, 1);
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/ic40.svg")), 0, Scale, Scale, 1);
   }
  if (micbmp) delete micbmp;
  micbmp = new lxBitmap (&image, &Window1);

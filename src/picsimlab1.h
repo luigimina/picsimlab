@@ -113,6 +113,7 @@ public:
     void _EvOnCreate(CControl * control);
     void _EvOnDestroy(CControl * control);
     void _EvOnShow(CControl * control);
+    void _EvOnDropFile(CControl * control, const lxString fname);
     void timer1_EvOnTime(CControl * control);
     void timer2_EvOnTime(CControl * control);
     void filedialog1_EvOnClose(const int retId);
@@ -301,20 +302,22 @@ public:
     void menu1_EvMicrocontroller(CControl * control);
     void LoadWorkspace(lxString fnpzw);
     void SaveWorkspace(lxString fnpzw);
-    void LoadHexFile(lxString fname);
+    int LoadHexFile(lxString fname);
     void SetClock(float clk);
     float GetClock(void);
     void EndSimulation(void);
     void RegisterError(const lxString error);
     void SetSync(unsigned char s){sync=s;};
     unsigned char GetSync(void){return sync;};
+    void SetSimulationRun(int run);
+    int GetSimulationRun(void);
+    void DrawBoard(void);
 #ifndef _NOTHREAD    
     lxCondition * cpu_cond;
     lxMutex * cpu_mutex;
 #endif    
 private:
     lxString share;
-
     int pa;
     int mcurun;
     int mcupwr;
@@ -326,7 +329,6 @@ private:
     unsigned short remotec_port;
     int osc_on;
     int spare_on;
-
     union {
         char st[2];
         unsigned short int status;
@@ -378,6 +380,7 @@ enum {
 #define ST_T1 0x01
 #define ST_T2 0x02
 #define ST_TH 0x04
+#define ST_DI 0x80 //DISABLE
 
 #endif /*#CPWINDOW1*/
 

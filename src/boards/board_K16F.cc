@@ -263,8 +263,9 @@ cboard_K16F::Run_CPU(void)
  unsigned int alm[18]; //luminosidade media
 
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS ();
- long int NSTEP = Window1.GetNSTEP () / pic.PINCOUNT;
+ const int JUMPSTEPS = Window1.GetJUMPSTEPS ();
+ const long int NSTEP = Window1.GetNSTEP ();
+ const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
  pins = pic.pins;
 
@@ -273,8 +274,9 @@ cboard_K16F::Run_CPU(void)
  if (use_spare)Window5.PreProcess ();
 
  j = JUMPSTEPS;
+ pi = 0;
  if (Window1.Get_mcupwr ())
-  for (i = 0; i < Window1.GetNSTEP (); i++)
+  for (i = 0; i < NSTEP; i++)
    {
     if (j >= JUMPSTEPS)
      {
@@ -383,7 +385,9 @@ cboard_K16F::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pic.PINCOUNT)pi = 0;
 
     if (j >= JUMPSTEPS)
      {
@@ -447,7 +451,7 @@ cboard_K16F::Run_CPU(void)
 
  for (pi = 0; pi < pic.PINCOUNT; pi++)
   {
-   pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
+   pic.pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
   }
 
  if (use_spare)Window5.PostProcess ();
@@ -1020,7 +1024,7 @@ cboard_K16F::get_out_id(char * name)
  if (strcmp (name, "DS_LCD") == 0)return O_LCD;
  if (strcmp (name, "PB_RST") == 0)return O_RST;
 
- if (strcmp (name, "MP_CPU") == 0)return O_MP;
+ if (strcmp (name, "IC_CPU") == 0)return O_MP;
 
  printf ("Erro output '%s' don't have a valid id! \n", name);
  return 1;

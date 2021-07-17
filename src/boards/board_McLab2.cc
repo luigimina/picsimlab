@@ -159,9 +159,9 @@ font(10, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  active = 0;
 
  lxImage image (&Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg")));
  vent[0] = new lxBitmap (&image, &Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg")));
  vent[1] = new lxBitmap (&image, &Window1);
 
  image.Destroy ();
@@ -653,7 +653,7 @@ cboard_McLab2::Run_CPU(void)
 {
  int i;
  int j;
- unsigned char pi;
+ unsigned char pi, pj;
  unsigned char pinv;
  const picpin * pins;
  unsigned int alm[40]; //luminosidade media
@@ -663,8 +663,10 @@ cboard_McLab2::Run_CPU(void)
  unsigned int alm4[40]; //luminosidade media display     
 
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS ();
- long int NSTEPJ = Window1.GetNSTEPJ ();
+ const int JUMPSTEPS = Window1.GetJUMPSTEPS ();
+ const long int NSTEPJ = Window1.GetNSTEPJ ();
+ const long int NSTEP = Window1.GetNSTEP ();
+ const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
  memset (alm, 0, 40 * sizeof (unsigned int));
  memset (alm1, 0, 40 * sizeof (unsigned int));
@@ -677,8 +679,9 @@ cboard_McLab2::Run_CPU(void)
  if (use_spare)Window5.PreProcess ();
 
  j = JUMPSTEPS;
+ pi = 0;
  if (Window1.Get_mcupwr ())
-  for (i = 0; i < Window1.GetNSTEP (); i++)
+  for (i = 0; i < NSTEP; i++)
    {
 
 
@@ -704,18 +707,20 @@ cboard_McLab2::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pic.PINCOUNT)pi = 0;
 
     if (j >= JUMPSTEPS)
      {
 
-      for (pi = 18; pi < 30; pi++)
+      for (pj = 18; pj < 30; pj++)
        {
         pinv = pins[pi].value;
-        if ((pinv)&&(pins[39].value)) alm1[pi]++;
-        if ((pinv)&&(pins[38].value)) alm2[pi]++;
-        if ((pinv)&&(pins[37].value)) alm3[pi]++;
-        if ((pinv)&&(pins[36].value)) alm4[pi]++;
+        if ((pinv)&&(pins[39].value)) alm1[pj]++;
+        if ((pinv)&&(pins[38].value)) alm2[pj]++;
+        if ((pinv)&&(pins[37].value)) alm3[pj]++;
+        if ((pinv)&&(pins[36].value)) alm4[pj]++;
        }
 
 
@@ -803,7 +808,7 @@ cboard_McLab2::Run_CPU(void)
    if (pic.pins[pi].port == P_VDD)
     pic.pins[pi].oavalue = 255;
    else
-    pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / (Window1.GetNSTEP () / pic.PINCOUNT)) + 55);
+    pic.pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
 
    lm1[pi] = (int) (((600.0 * alm1[pi]) / NSTEPJ) + 30);
    lm2[pi] = (int) (((600.0 * alm2[pi]) / NSTEPJ) + 30);
@@ -1472,9 +1477,9 @@ cboard_McLab2::get_out_id(char * name)
 
  if (strcmp (name, "PB_RST") == 0)return O_RST;
 
- if (strcmp (name, "MT_VT") == 0) return O_VT;
+ if (strcmp (name, "MC_VT") == 0) return O_VT;
 
- if (strcmp (name, "MP_CPU") == 0)return O_MP;
+ if (strcmp (name, "IC_CPU") == 0)return O_MP;
 
  printf ("Erro output '%s' don't have a valid id! \n", name);
  return 1;

@@ -77,7 +77,7 @@ cboard_Arduino_Uno::get_out_id(char * name)
 
 //Constructor called once on board creation 
 
-cboard_Arduino_Uno::cboard_Arduino_Uno(void) 
+cboard_Arduino_Uno::cboard_Arduino_Uno(void)
 {
 
  Proc = "atmega328p"; //default microcontroller if none defined in preferences
@@ -314,15 +314,7 @@ cboard_Arduino_Uno::Reset(void)
 void
 cboard_Arduino_Uno::RegisterRemoteControl(void)
 {
- for (int i = 0; i < outputc; i++)
-  {
-   switch (output[i].id)
-    {
-    case O_L:
-     output[i].status = &pins[18].oavalue;
-     break;
-    }
-  }
+ output_ids[O_L]->status = &pins[18].oavalue;
 }
 
 //Called ever 1s to refresh status
@@ -344,24 +336,27 @@ cboard_Arduino_Uno::RefreshStatus(void)
   Window1.statusbar1.SetField (2, lxT ("Serial: ") +
                                lxString::FromAscii (SERIALDEVICE) + lxT (" (ERROR)"));
 
- switch (avr->state)
+ if (avr)
   {
-  case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
-   break;
-  case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
-   break;
-  case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
-   break;
-  case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
-   break;
-  case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
-   break;
-  case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
-   break;
-  case cpu_Done: Window1.SetCpuState (CPU_HALTED);
-   break;
-  case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
-   break;
+   switch (avr->state)
+    {
+    case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
+     break;
+    case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
+     break;
+    case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
+     break;
+    case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
+     break;
+    case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
+     break;
+    case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
+     break;
+    case cpu_Done: Window1.SetCpuState (CPU_HALTED);
+     break;
+    case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
+     break;
+    }
   }
 }
 
@@ -583,14 +578,15 @@ cboard_Arduino_Uno::Run_CPU(void)
 {
 
  int i;
- int j;
+ //int j;
  unsigned char pi;
  const picpin *pins;
  unsigned int alm[40];
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS ()*4.0; //number of steps skipped
- int pinc = MGetPinCount ();
- long int NSTEP = 4.0 * Window1.GetNSTEP () / pinc; //number of steps in 100ms
+ //int JUMPSTEPS = Window1.GetJUMPSTEPS ()*4.0; //number of steps skipped
+ const int pinc = MGetPinCount ();
+ const long int NSTEP = 4.0 * Window1.GetNSTEP (); //number of steps in 100ms
+ const float RNSTEP = 200.0 * pinc / NSTEP;
 
  long long unsigned int cycle_start;
  int twostep = 0;
@@ -606,9 +602,10 @@ cboard_Arduino_Uno::Run_CPU(void)
 
  if (use_spare)Window5.PreProcess ();
 
- j = JUMPSTEPS; //step counter
+ //j = JUMPSTEPS; //step counter
+ pi = 0;
  if (Window1.Get_mcupwr ()) //if powered
-  for (i = 0; i < (Window1.GetNSTEP ()*4); i++) //repeat for number of steps in 100ms
+  for (i = 0; i < NSTEP; i++) //repeat for number of steps in 100ms
    {
 
     //verify if a breakpoint is reached if not run one instruction   
@@ -637,23 +634,26 @@ cboard_Arduino_Uno::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pinc] += pins[i % pinc].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pinc)pi = 0;
+    /*
+        if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
+         {
+          //set analog pin 2 (AN0) with value from scroll  
+          //pic_set_apin(2,((5.0*(scroll1->GetPosition()))/
+          //  (scroll1->GetRange()-1)));
 
-    if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
-     {
-      //set analog pin 2 (AN0) with value from scroll  
-      //pic_set_apin(2,((5.0*(scroll1->GetPosition()))/
-      //  (scroll1->GetRange()-1)));
-
-      j = -1; //reset counter
-     }
-    j++; //counter increment   
+          j = -1; //reset counter
+         }
+        j++; //counter increment   
+     */
    }
 
  //calculate mean value
  for (pi = 0; pi < MGetPinCount (); pi++)
   {
-   cboard_Arduino_Uno::pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
+   cboard_Arduino_Uno::pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
   }
 
  if (use_spare)Window5.PostProcess ();

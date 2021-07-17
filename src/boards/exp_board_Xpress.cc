@@ -27,7 +27,7 @@
 #include"../picsimlab1.h"
 #include"../picsimlab4.h"
 #include"../picsimlab5.h"
-#include"board_Xpress.h"
+#include"exp_board_Xpress.h"
 
 /* ids of inputs of input map*/
 enum
@@ -618,9 +618,9 @@ cboard_Xpress::Run_CPU(void)
  const picpin * pins;
  unsigned int alm[28];
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- long int NSTEP = Window1.GetNSTEP () / pic.PINCOUNT; //number of steps in 100ms
-
+ const int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
+ const long int NSTEP = Window1.GetNSTEP (); //number of steps in 100ms
+ const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
  //reset mean value
  memset (alm, 0, 28 * sizeof (unsigned int));
@@ -631,8 +631,9 @@ cboard_Xpress::Run_CPU(void)
  if (use_spare)Window5.PreProcess ();
 
  j = JUMPSTEPS; //step counter
+ pi = 0;
  if (Window1.Get_mcupwr ()) //if powered
-  for (i = 0; i < Window1.GetNSTEP (); i++) //repeat for number of steps in 100ms
+  for (i = 0; i < NSTEP; i++) //repeat for number of steps in 100ms
    {
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
@@ -647,7 +648,9 @@ cboard_Xpress::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pic.PINCOUNT)pi = 0;
 
     if (j >= JUMPSTEPS)//if number of step is bigger than steps to skip 
      {
@@ -663,12 +666,12 @@ cboard_Xpress::Run_CPU(void)
  //calculate mean value
  for (pi = 0; pi < pic.PINCOUNT; pi++)
   {
-   pic.pins[pi].oavalue = (int) (((200.0 * alm[pi]) / NSTEP) + 55);
+   pic.pins[pi].oavalue = (int) ((alm[pi] * RNSTEP) + 55);
   }
 
  if (use_spare)Window5.PostProcess ();
 }
 
 
-board_init(BOARD_Xpress_Name , cboard_Xpress);
+board_init(BOARD_Xpress_Name, cboard_Xpress);
 

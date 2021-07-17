@@ -70,6 +70,7 @@ bsim_simavr::bsim_simavr(void)
  serial_irq = NULL;
  avr_debug_type = 0;
  eeprom = NULL;
+ has_usart = 0;
 }
 
 void
@@ -203,10 +204,12 @@ bsim_simavr::MInit(const char * processor, const char * fname, float freq)
  if (lxString (avr->mmcu).compare (lxT ("atmega2560")) == 0)
   {
    avr->reset_pc = 0x3E000;
+   has_usart = 1;
   }
  else if (((lxString (avr->mmcu).compare (lxT ("atmega328p")) == 0)) || ((lxString (avr->mmcu).compare (lxT ("atmega328")) == 0)))
   {
    avr->reset_pc = 0x07000; // bootloader 0x3800
+   has_usart = 1;
   }
  else
   {
@@ -218,7 +221,11 @@ bsim_simavr::MInit(const char * processor, const char * fname, float freq)
  //avr->log= LOG_DEBUG;
 
  avr_reset (avr);
- avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
+
+ if (has_usart)
+  {
+   avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
+  }
  pins_reset ();
 
  /*
@@ -260,23 +267,25 @@ bsim_simavr::MInit(const char * processor, const char * fname, float freq)
   }
 
 
-
- // disable the uart stdio 
- uint32_t f = 0;
- avr_ioctl (avr, AVR_IOCTL_UART_GET_FLAGS ('0'), &f);
- f &= ~AVR_UART_FLAG_STDIO;
- f &= ~AVR_UART_FLAG_POLL_SLEEP;
- avr_ioctl (avr, AVR_IOCTL_UART_SET_FLAGS ('0'), &f);
-
- serial_irq = avr_alloc_irq (&avr->irq_pool, 0, IRQ_UART_COUNT, irq_names_uart);
- avr_irq_register_notify (serial_irq + IRQ_UART_BYTE_IN, uart_in_hook, this);
-
- avr_irq_t * src = avr_io_getirq (avr, AVR_IOCTL_UART_GETIRQ ('0'), UART_IRQ_OUTPUT);
- avr_irq_t * dst = avr_io_getirq (avr, AVR_IOCTL_UART_GETIRQ ('0'), UART_IRQ_INPUT);
- if (src && dst)
+ if (has_usart)
   {
-   avr_connect_irq (src, serial_irq + IRQ_UART_BYTE_IN);
-   avr_connect_irq (serial_irq + IRQ_UART_BYTE_OUT, dst);
+   // disable the uart stdio 
+   uint32_t f = 0;
+   avr_ioctl (avr, AVR_IOCTL_UART_GET_FLAGS ('0'), &f);
+   f &= ~AVR_UART_FLAG_STDIO;
+   f &= ~AVR_UART_FLAG_POLL_SLEEP;
+   avr_ioctl (avr, AVR_IOCTL_UART_SET_FLAGS ('0'), &f);
+
+   serial_irq = avr_alloc_irq (&avr->irq_pool, 0, IRQ_UART_COUNT, irq_names_uart);
+   avr_irq_register_notify (serial_irq + IRQ_UART_BYTE_IN, uart_in_hook, this);
+
+   avr_irq_t * src = avr_io_getirq (avr, AVR_IOCTL_UART_GETIRQ ('0'), UART_IRQ_OUTPUT);
+   avr_irq_t * dst = avr_io_getirq (avr, AVR_IOCTL_UART_GETIRQ ('0'), UART_IRQ_INPUT);
+   if (src && dst)
+    {
+     avr_connect_irq (src, serial_irq + IRQ_UART_BYTE_IN);
+     avr_connect_irq (serial_irq + IRQ_UART_BYTE_OUT, dst);
+    }
   }
 
  serial_port_open (&serialfd, SERIALDEVICE);
@@ -284,13 +293,17 @@ bsim_simavr::MInit(const char * processor, const char * fname, float freq)
  serialexbaud = 9600;
  serialbaud = serial_port_cfg (serialfd, serialexbaud);
 
- bitbang_uart_init (&bb_uart);
+ if (has_usart)
+  {
+   bitbang_uart_init (&bb_uart);
 
- bitbang_uart_set_speed (&bb_uart, serialexbaud);
- bitbang_uart_set_clk_freq (&bb_uart, freq);
+   bitbang_uart_set_speed (&bb_uart, serialexbaud);
+   bitbang_uart_set_clk_freq (&bb_uart, freq);
 
- pin_rx = 2; //PD0
- pin_tx = 3; //PD1  
+   pin_rx = 2; //PD0
+   pin_tx = 3; //PD1  
+  }
+
  uart_config = 0;
  return ret;
 }
@@ -346,10 +359,16 @@ bsim_simavr::MEnd(void)
   }
 
  free ((void*) avr->irq_pool.irq);
+
+ if (has_usart)
+  {
+   bitbang_uart_end (&bb_uart);
+  }
+
  free (avr);
  avr = NULL;
 
- bitbang_uart_end (&bb_uart);
+
 }
 
 void
@@ -365,7 +384,10 @@ bsim_simavr::MSetFreq(float freq)
  if (avr)
   {
    avr->frequency = freq;
-   bitbang_uart_set_clk_freq (&bb_uart, freq);
+   if (has_usart)
+    {
+     bitbang_uart_set_clk_freq (&bb_uart, freq);
+    }
   }
 }
 
@@ -437,6 +459,7 @@ bsim_simavr::DebugInit(int dtyppe)
    avr->gdb_port = Window1.Get_debug_port ();
    if (avr_gdb_init (avr))
     {
+     Window1.RegisterError ("Error starting GDB debugger support !");
      return -1;
     }
    else
@@ -448,7 +471,13 @@ bsim_simavr::DebugInit(int dtyppe)
   }
  else
   {
-   return !mplabxd_init (this, Window1.Get_debug_port ()) - 1;
+   int ret = !mplabxd_init (this, Window1.Get_debug_port ()) - 1;
+
+   if (ret < 0)
+    {
+     Window1.RegisterError ("Error starting MPLABX debugger support !");
+    }
+   return ret;
   }
 }
 
@@ -1035,7 +1064,29 @@ bsim_simavr::MSetAPin(int pin, float value)
      break;
     }
   }
- else
+ else if (lxString (avr->mmcu).compare (lxT ("attiny85")) == 0)
+  {
+   switch (pin)
+    {
+    case 5:
+     pins[pin - 1].ptype = PT_ANALOG;
+     avr_raise_irq (avr_io_getirq (avr, AVR_IOCTL_ADC_GETIRQ, 0), (int) (value * 1000));
+     break;
+    case 7:
+     pins[pin - 1].ptype = PT_ANALOG;
+     avr_raise_irq (avr_io_getirq (avr, AVR_IOCTL_ADC_GETIRQ, 1), (int) (value * 1000));
+     break;
+    case 3:
+     pins[pin - 1].ptype = PT_ANALOG;
+     avr_raise_irq (avr_io_getirq (avr, AVR_IOCTL_ADC_GETIRQ, 2), (int) (value * 1000));
+     break;
+    case 2:
+     pins[pin - 1].ptype = PT_ANALOG;
+     avr_raise_irq (avr_io_getirq (avr, AVR_IOCTL_ADC_GETIRQ, 3), (int) (value * 1000));
+     break;
+    }
+  }
+ else//atmega328
   {
    switch (pin)
     {
@@ -1085,7 +1136,10 @@ void
 bsim_simavr::SerialSend(unsigned char value)
 {
  serial_port_send (serialfd, value);
- bitbang_uart_send (&bb_uart, value);
+ if (has_usart)
+  {
+   bitbang_uart_send (&bb_uart, value);
+  }
 }
 
 /*
@@ -1195,8 +1249,11 @@ void
 bsim_simavr::MReset(int flags)
 {
  avr_reset (avr);
- avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
- bitbang_uart_rst (&bb_uart);
+ if (has_usart)
+  {
+   avr->data[UCSR0B] = 0x00; //FIX the simavr reset TX enabled
+   bitbang_uart_rst (&bb_uart);
+  }
 }
 
 unsigned short *
@@ -1441,7 +1498,7 @@ bsim_simavr::read_ihx_avr(const char * fname, int leeprom)
       }
      else
       {
-       printf ("ERRO: Picsim->File bad checksum line %i!(%s)\n", lc, fname);
+       printf ("ERRO: Simavr->File bad checksum line %i!(%s)\n", lc, fname);
        fclose (fin);
        return HEX_CHKSUM;
       }
@@ -1451,7 +1508,7 @@ bsim_simavr::read_ihx_avr(const char * fname, int leeprom)
   }
  else
   {
-   printf ("ERRO: Picsim->File not found!(%s)\n", fname);
+   printf ("ERRO: Simavr->File not found!(%s)\n", fname);
    return HEX_NFOUND;
   }
  return 0; //no error
@@ -1650,7 +1707,7 @@ bsim_simavr::write_ihx_avr(const char * fname)
   }
  else
   {
-   printf ("ERRO: Picsim->File not found!(%s)\n", fname);
+   printf ("ERRO: Simavr->File not found!(%s)\n", fname);
    return HEX_NWRITE;
   }
  return 0; //no error

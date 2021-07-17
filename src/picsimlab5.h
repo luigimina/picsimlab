@@ -137,6 +137,7 @@ public:
     void PropButtonRelease(CControl * control, uint button, uint x, uint y, uint state);
     void PropComboChange(CCombo * control);
     void PropClose(int tag);
+    void Reset_i2c_bus(unsigned char pin);
     void Set_i2c_bus(unsigned char pin, unsigned char value);
     unsigned char Get_i2c_bus(unsigned char pin);
     void PartButtonEvent(CControl * control, uint button, uint x, uint y, uint state);
@@ -186,6 +187,8 @@ private:
     float scale;
     lxString LoadConfigFile;
     unsigned char i2c_bus[IOINIT];
+    int i2c_bus_count;
+    unsigned char i2c_bus_ptr[IOINIT];
     CPWindow wprop;
     int fdtype;
     lxString oldfname;

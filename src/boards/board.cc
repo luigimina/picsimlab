@@ -44,8 +44,13 @@ board::ReadMaps(void)
 {
  inputc = 0;
  outputc = 0;
- ReadInputMap (Window1.GetSharePath () + lxT ("boards/") + GetMapFile ());
- ReadOutputMap (Window1.GetSharePath () + lxT ("boards/") + GetMapFile ());
+ ReadInputMap (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/") + GetMapFile ()));
+ ReadOutputMap (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/") + GetMapFile ()));
+
+ for (int i = 0; i < inputc; i++)
+  {
+   input_ids[get_in_id (input[i].name)] = &input[i];
+  }
 
  for (int i = 0; i < outputc; i++)
   {
@@ -408,14 +413,14 @@ board::EvOnShow(void)
   }
 }
 
-lxString 
+lxString
 board::GetPictureFileName(void)
 {
- return GetName() + lxT ("/board.svg");
+ return GetName () + lxT ("/board.svg");
 }
 
 lxString
 board::GetMapFile(void)
 {
- return GetName() + lxT ("/board.map");
+ return GetName () + lxT ("/board.map");
 }

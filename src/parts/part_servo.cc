@@ -49,12 +49,12 @@ cpart_servo::cpart_servo(unsigned x, unsigned y)
  ReadMaps ();
 
  lxImage image (&Window5);
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
 
  Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
  BackGround = new lxBitmap (&image, &Window5);
  image.Destroy ();
 
@@ -161,13 +161,13 @@ cpart_servo::PostProcess(void)
    angle += 0.2;
    if (angle > angle_) angle = angle_;
   }
- 
- 
-  if (output_ids[O_AXIS]->value_f != angle)
+
+
+ if (output_ids[O_AXIS]->value_f != angle)
   {
    output_ids[O_AXIS]->value_f = angle;
    output_ids[O_AXIS]->update = 1;
-   output_ids[O_P1]->update = 1; 
+   output_ids[O_P1]->update = 1;
   }
 }
 
@@ -209,15 +209,7 @@ cpart_servo::ReadPreferences(lxString value)
 void
 cpart_servo::RegisterRemoteControl(void)
 {
- for (int i = 0; i < outputc; i++)
-  {
-   switch (output[i].id)
-    {
-    case O_AXIS:
-     output[i].status = (void *) &angle;
-     break;
-    }
-  }
+ output_ids[O_AXIS]->status = (void *) &angle;
 }
 
 void
@@ -260,7 +252,7 @@ cpart_servo::SetOrientation(int orientation)
 
  lxImage image (&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
 
  BackGround = new lxBitmap (&image, &Window5);
 
@@ -279,7 +271,7 @@ cpart_servo::SetScale(double scale)
 
  lxImage image (&Window5);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
 
  BackGround = new lxBitmap (&image, &Window5);
 

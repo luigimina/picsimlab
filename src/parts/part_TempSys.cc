@@ -48,7 +48,7 @@ font(9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  ReadMaps ();
 
  lxImage image (&Window5);
- image.LoadFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName (), Orientation, Scale, Scale);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
 
  Bitmap = new lxBitmap (&image, &Window5);
  image.Destroy ();
@@ -58,11 +58,11 @@ font(9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  vtc = 0;
  vt = 0;
 
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg"), Orientation, Scale * 0.867, Scale * 0.867);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/Common/VT1.svg")), Orientation, Scale * 0.867, Scale * 0.867);
  vent[0] = new lxBitmap (&image, &Window1);
  image.Destroy ();
 
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg"), Orientation, Scale * 0.867, Scale * 0.867);
+ image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/Common/VT2.svg")), Orientation, Scale * 0.867, Scale * 0.867);
  vent[1] = new lxBitmap (&image, &Window1);
  image.Destroy ();
 
@@ -263,7 +263,7 @@ unsigned short
 cpart_tempsys::get_out_id(char * name)
 {
 
- if (strcmp (name, "DG_VT") == 0)return O_VT;
+ if (strcmp (name, "MC_VT") == 0)return O_VT;
  if (strcmp (name, "PN_HT") == 0)return O_HT;
  if (strcmp (name, "PN_CO") == 0)return O_CO;
  if (strcmp (name, "PN_TE") == 0)return O_TE;
@@ -360,11 +360,11 @@ cpart_tempsys::SetOrientation(int _orientation)
 
   lxImage image (&Window5);
 
-  image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg"), Orientation, Scale * 0.867, Scale * 0.867);
+  image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/Common/VT1.svg"), Orientation, Scale * 0.867, Scale * 0.867);
   vent[0] = new lxBitmap (&image, &Window1);
   image.Destroy ();
 
-  image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg"), Orientation, Scale * 0.867, Scale * 0.867);
+  image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("boards/Common/VT2.svg"), Orientation, Scale * 0.867, Scale * 0.867);
   vent[1] = new lxBitmap (&image, &Window1);
   image.Destroy ();
   */

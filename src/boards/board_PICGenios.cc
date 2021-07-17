@@ -101,14 +101,14 @@ font(10, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  sound_on = 0;
 
  lxImage image (&Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/VT1.svg")));
  vent[0] = new lxBitmap (&image, &Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/VT2.svg")));
  vent[1] = new lxBitmap (&image, &Window1);
 
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/lcd2.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/lcd2.svg")));
  lcdbmp[0] = new lxBitmap (&image, &Window1);
- image.LoadFile (Window1.GetSharePath () + lxT ("boards/Common/lcd4.svg"));
+ image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("boards/Common/lcd4.svg")));
  lcdbmp[1] = new lxBitmap (&image, &Window1);
 
  image.Destroy ();
@@ -783,7 +783,7 @@ cboard_PICGenios::Run_CPU(void)
 {
  int i;
  int j;
- unsigned char pi;
+ unsigned char pi, pj;
  unsigned char pinv;
  const picpin * pins;
 
@@ -793,9 +793,10 @@ cboard_PICGenios::Run_CPU(void)
  unsigned int alm3[40]; //luminosidade media display
  unsigned int alm4[40]; //luminosidade media display
 
- int JUMPSTEPS = Window1.GetJUMPSTEPS ();
- long int NSTEPJ = Window1.GetNSTEPJ ();
- long int NSTEP = Window1.GetNSTEP () / pic.PINCOUNT;
+ const int JUMPSTEPS = Window1.GetJUMPSTEPS ();
+ const long int NSTEPJ = Window1.GetNSTEPJ ();
+ const long int NSTEP = Window1.GetNSTEP ();
+ const float RNSTEP = 200.0 * pic.PINCOUNT / NSTEP;
 
  if (use_spare)Window5.PreProcess ();
 
@@ -809,9 +810,9 @@ cboard_PICGenios::Run_CPU(void)
 
 
  j = JUMPSTEPS;
-
+ pi = 0;
  if (Window1.Get_mcupwr ())
-  for (i = 0; i < Window1.GetNSTEP (); i++)
+  for (i = 0; i < NSTEP; i++)
    {
 
     if (j >= JUMPSTEPS)
@@ -938,18 +939,20 @@ cboard_PICGenios::Run_CPU(void)
     if (use_spare)Window5.Process ();
 
     //increment mean value counter if pin is high
-    alm[i % pic.PINCOUNT] += pins[i % pic.PINCOUNT].value;
+    alm[pi] += pins[pi].value;
+    pi++;
+    if (pi == pic.PINCOUNT)pi = 0;
 
     if (j >= JUMPSTEPS)
      {
 
-      for (pi = 18; pi < 30; pi++)
+      for (pj = 18; pj < 30; pj++)
        {
-        pinv = pins[pi].value;
-        if ((pinv)&&(pins[3].value)&&(dip[10])) alm1[pi]++;
-        if ((pinv)&&(pins[4].value)&&(dip[11])) alm2[pi]++;
-        if ((pinv)&&(pins[5].value)&&(dip[12])) alm3[pi]++;
-        if ((pinv)&&(pins[6].value)&&(dip[13])) alm4[pi]++;
+        pinv = pins[pj].value;
+        if ((pinv)&&(pins[3].value)&&(dip[10])) alm1[pj]++;
+        if ((pinv)&&(pins[4].value)&&(dip[11])) alm2[pj]++;
+        if ((pinv)&&(pins[5].value)&&(dip[12])) alm3[pj]++;
+        if ((pinv)&&(pins[6].value)&&(dip[13])) alm4[pj]++;
        }
 
       if (dip[7])alm[32] = 0;
@@ -1031,7 +1034,7 @@ cboard_PICGenios::Run_CPU(void)
    if (pic.pins[i].port == P_VDD)
     pic.pins[i].oavalue = 255;
    else
-    pic.pins[i].oavalue = (int) (((200.0 * alm[i]) / NSTEP) + 55);
+    pic.pins[i].oavalue = (int) ((alm[i] * RNSTEP) + 55);
 
    lm1[i] = (int) (((600.0 * alm1[i]) / NSTEPJ) + 55);
    lm2[i] = (int) (((600.0 * alm2[i]) / NSTEPJ) + 55);
@@ -2356,7 +2359,7 @@ cboard_PICGenios::get_out_id(char * name)
  if (strcmp (name, "DP_18") == 0)return O_D18;
  if (strcmp (name, "DP_19") == 0)return O_D19;
  if (strcmp (name, "DP_20") == 0)return O_D20;
- if (strcmp (name, "MT_VT") == 0) return O_VT;
+ if (strcmp (name, "MC_VT") == 0) return O_VT;
 
  if (strcmp (name, "JP_1") == 0)return O_JP1;
 
@@ -2384,7 +2387,7 @@ cboard_PICGenios::get_out_id(char * name)
  if (strcmp (name, "PO_1") == 0)return O_POT1;
  if (strcmp (name, "PO_2") == 0)return O_POT2;
 
- if (strcmp (name, "MP_CPU") == 0)return O_MP;
+ if (strcmp (name, "IC_CPU") == 0)return O_MP;
 
  printf ("Erro output '%s' don't have a valid id! \n", name);
  return 1;

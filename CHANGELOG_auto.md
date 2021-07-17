@@ -2,6 +2,14 @@
 
 ### New
 
+* Support to open files using drag and drop. [lcgamboa]
+
+* New part Fixed Voltage. [lcgamboa]
+
+* New part SHT3X temperature and humidity sensor. [lcgamboa]
+
+* New part FM50 temperature sensor. [lcgamboa]
+
 * New part LM35 temperature sensor. [lcgamboa]
 
 * Support to dump Flash memory in rcontrol interface. [lcgamboa]
@@ -22,9 +30,13 @@
 
 ### Fix
 
+* Buzzer passive mode audio clicks removed. [lcgamboa]
+
 * Removed the problem that caused PICSimLab don't start when qemu-stm32 was not found. [lcgamboa]
 
 ### Other
+
+* Rcontrol new command loadhex. [lcgamboa]
 
 * Merge pull request #38 from dantop03/master. [lcgamboa]
 
