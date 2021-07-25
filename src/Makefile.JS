@@ -15,7 +15,7 @@ execdir= ${prefix}/bin/
 #lxrad automatic generated block start, don't edit below!
 
 override CXXFLAGS+= -D_ARCH_=\"Javascript\" -D_DATE_=\"${DATE}\"
-override CXXFLAGS+= -Os
+override CXXFLAGS+= -O2 -flto
 #override CXXFLAGS+= -g4 --source-map-base -Werror
 override CXXFLAGS+=  -DEXT_BROWSER -DNO_DEBUG -DNO_TOOLS \
         -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_GFX=2\
@@ -30,7 +30,7 @@ override CXXFLAGS+= --pre-js load.js
 #	-s "BINARYEN_TRAP_MODE='clamp'" 
 
 LINK= -s DEMANGLE_SUPPORT=0  -s SAFE_HEAP=0 -s ASSERTIONS=0 -s TOTAL_MEMORY=128MB \
-      -s EXPORTED_FUNCTIONS='["_main","_file_ready","_lxrad_scale_up","_lxrad_scale_down","_dirt_load"]' \
+      -s EXPORTED_FUNCTIONS='["_main","_file_ready","_lxrad_scale_up","_lxrad_scale_down","_dirt_load","_SimRun","_SimStat"]' \
       -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' 
 
 #CXXFLAGS+=-s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=2 

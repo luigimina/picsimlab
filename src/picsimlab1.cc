@@ -203,7 +203,11 @@ CPWindow1::DrawBoard(void)
   {
    double scalex, scaley, scale_temp;
 
+#ifndef _WIN_  
    scalex = ((Window1.GetWidth () - 185)*1.0) / plWidth;
+#else
+   scalex = ((Window1.GetWidth () - 190)*1.0) / plWidth;
+#endif   
    scaley = ((Window1.GetHeight () - 90)*1.0) / plHeight;
 
 
@@ -1991,5 +1995,18 @@ extern "C"
    }
  }
 
+#ifdef __EMSCRIPTEN__
 
+ void
+ SimRun(int run)
+ {
+  Window1.SetSimulationRun (run);
+ }
+
+ int
+ SimStat(void)
+ {
+  return Window1.GetSimulationRun ();
+ }
+#endif
 }
