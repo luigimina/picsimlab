@@ -51,6 +51,9 @@ CPWindow5::_EvOnShow(CControl * control)
    for (int i = 0; i < partsc; i++)
     {
      parts[i]->SetUpdate (1);
+#if defined(_LX_SDL2) ||  defined(__EMSCRIPTEN__)     
+     parts[i]->SetScale (parts[i]->GetScale () + 1e-3);
+#endif     
     }
   }
 }
@@ -1117,7 +1120,14 @@ CPWindow5::Set_i2c_bus(unsigned char pin, unsigned char value)
 {
  if (pin < IOINIT)
   {
-   i2c_bus[pin] |= value;
+   if (i2c_bus_count)
+    {
+     i2c_bus[pin] |= value;
+    }
+   else
+    {
+     i2c_bus[pin] = value;
+    }
   }
 }
 
