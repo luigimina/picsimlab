@@ -38,30 +38,18 @@ CPWindow4 Window4;
 
 //Implementation
 
-
-#define WMAX 350
-#define HMAX 250
-
-#define NPOINTS 700
-
-//flip buffers+ 2 channels + 700 points
-double data[2][2][NPOINTS];
-int fp = 0;
-
-double *ch[2];
-
-int tch = 0;
-
 void
 CPWindow4::DrawScreen(void)
 {
  draw1.Canvas.Init ();
+ draw1.Canvas.SetFont (*font);
 
  //Clear background
  draw1.Canvas.SetFgColor (0, 0, 0);
  draw1.Canvas.SetBgColor (0, 0, 0);
- draw1.Canvas.Rectangle (1, 0, 0, WMAX, HMAX + 30);
- //draw lines
+ draw1.Canvas.Rectangle (1, 0, 0, WMAX + 80, HMAX + 30);
+
+ //draw grid lines
  draw1.Canvas.SetFgColor (50, 50, 50);
 
  int inch = HMAX / 10;
@@ -78,7 +66,6 @@ CPWindow4::DrawScreen(void)
 
  float gain[3], nivel[3];
  lxPoint pts[3];
-
 
  //draw ch 0
  if (togglebutton1.GetCheck ())
@@ -103,6 +90,7 @@ CPWindow4::DrawScreen(void)
     }
   }
  draw1.Canvas.SetLineWidth (1);
+
  //draw ch 1
  if (togglebutton2.GetCheck ())
   {
@@ -158,8 +146,8 @@ CPWindow4::DrawScreen(void)
  pts[2].x = nivel[2] + 3;
  draw1.Canvas.Polygon (1, pts, 3);
 
+ //draw text info
  lxString text;
-
  draw1.Canvas.SetFgColor (0, 0, 0);
  draw1.Canvas.SetBgColor (0, 0, 0);
  draw1.Canvas.Rectangle (1, 0, HMAX, WMAX, HMAX + 30);
@@ -200,6 +188,87 @@ CPWindow4::DrawScreen(void)
    text.Printf ("TRG Off");
   }
  draw1.Canvas.Text (text, WMAX / 2, HMAX + 14);
+
+
+ lxString text1;
+ lxString text2;
+ const int x = WMAX + 2;
+ int y;
+
+ for (int i = 0; i < 5; i++)
+  {
+   y = (56 * i);
+
+   //Clear background
+   draw1.Canvas.SetFgColor (200, 200, 200);
+   draw1.Canvas.SetBgColor (0, 0, 0);
+   draw1.Canvas.Rectangle (1, x, y, 77, 55);
+
+   switch (measures[i])
+    {
+    case 1:
+     text = "Vmax";
+     text1.Printf ("%7.3f V", ch_status[0].Vmax);
+     text2.Printf ("%7.3f V", ch_status[1].Vmax);
+     break;
+    case 2:
+     text = "Vmin";
+     text1.Printf ("%7.3f V", ch_status[0].Vmin);
+     text2.Printf ("%7.3f V", ch_status[1].Vmin);
+     break;
+    case 3:
+     text = "Vavg";
+     text1.Printf ("%7.3f V", ch_status[0].Vavr);
+     text2.Printf ("%7.3f V", ch_status[1].Vavr);
+     break;
+    case 4:
+     text = "Vrms";
+     text1.Printf ("%7.3f V", ch_status[0].Vrms);
+     text2.Printf ("%7.3f V", ch_status[1].Vrms);
+     break;
+    case 5:
+     text = "Frequency";
+     text1.Printf ("%7.0f Hz", ch_status[0].Freq);
+     text2.Printf ("%7.0f Hz", ch_status[1].Freq);
+     break;
+    case 6:
+     text = "Duty cycle";
+     text1.Printf ("%7.0f %%", ch_status[0].Duty);
+     text2.Printf ("%7.0f %%", ch_status[1].Duty);
+     break;
+    case 7:
+     text = "Pos. cycle";
+     text1.Printf ("%7.3f ms", ch_status[0].PCycle_ms);
+     text2.Printf ("%7.3f ms", ch_status[1].PCycle_ms);
+     break;
+    case 8:
+     text = "Neg. cycle";
+     text1.Printf ("%7.3f ms", ch_status[0].FCycle_ms - ch_status[0].PCycle_ms);
+     text2.Printf ("%7.3f ms", ch_status[1].FCycle_ms - ch_status[1].PCycle_ms);
+     break;
+    case 9:
+     text = "Full cycle";
+     text1.Printf ("%7.3f ms", ch_status[0].FCycle_ms);
+     text2.Printf ("%7.3f ms", ch_status[1].FCycle_ms);
+     break;
+    default:
+     text = "";
+     text1 = "";
+     text2 = "";
+    }
+
+   if (text.size () > 0)
+    {
+     draw1.Canvas.SetFgColor (200, 200, 200);
+     draw1.Canvas.Text (text, x + 4, y + 4);
+     draw1.Canvas.SetFgColor (button1.GetColor ());
+     draw1.Canvas.Text (text1, x + 2, y + 20);
+     draw1.Canvas.SetFgColor (button2.GetColor ());
+     draw1.Canvas.Text (text2, x + 2, y + 34);
+    }
+
+  }
+
 
  draw1.Canvas.End ();
 
@@ -309,12 +378,6 @@ CPWindow4::SetBaseTimer(void)
  spind5_EvOnChangeSpinDouble (this);
 }
 
-int is = 0;
-double t = 0;
-int tr = 0;
-double pins_[2];
-int update = 0;
-
 void
 CPWindow4::SetSample(void)
 {
@@ -334,13 +397,14 @@ CPWindow4::SetSample(void)
  else
   pins[1] = ppins[chpin[1]].value * 5.0;
 
+ //sampling
  if (t > Rt)
   {
    t -= Rt;
-   data[fp][0][is] = -pins[0]+((1.0 * rand () / RAND_MAX) - 0.5)*0.1;
-   data[fp][1][is] = -pins[1]+((1.0 * rand () / RAND_MAX) - 0.5)*0.1;
+   databuffer[fp][0][is] = -pins[0]+((1.0 * rand () / RAND_MAX) - 0.5)*0.1;
+   databuffer[fp][1][is] = -pins[1]+((1.0 * rand () / RAND_MAX) - 0.5)*0.1;
    is++;
-   if (is >= NPOINTS)
+   if (is >= NPOINTS) //buffer full
     {
      if (tr && togglebutton7.GetCheck ())
       {
@@ -348,13 +412,12 @@ CPWindow4::SetSample(void)
       }
      is = 0;
      tr = 0;
-     ch[0] = &data[fp][0][toffset];
-     ch[1] = &data[fp][1][toffset];
+     t = 0;
+     ch[0] = &databuffer[fp][0][toffset];
+     ch[1] = &databuffer[fp][1][toffset];
      fp = !fp; //togle fp
-     update = 1;
-     // DrawScreen();
+     update = 1; // Request redraw screen
     }
-
   }
  t += Dt;
 
@@ -371,8 +434,8 @@ CPWindow4::SetSample(void)
 
        for (int i = 0; i < NPOINTS / 2; i++)
         {
-         data[fp][0][i] = data[fp][0][i + is];
-         data[fp][1][i] = data[fp][1][i + is];
+         databuffer[fp][0][i] = databuffer[fp][0][i + is];
+         databuffer[fp][1][i] = databuffer[fp][1][i + is];
         }
        is = (NPOINTS / 2);
       }
@@ -401,7 +464,7 @@ CPWindow4::spind5_EvOnChangeSpinDouble(CControl * control)
  spind6.SetMin (-5 * spind5.GetValue ());
  spind6.SetMax (5 * spind5.GetValue ());
 
- spind6_EvOnChangeSpinDouble(this);
+ spind6_EvOnChangeSpinDouble (this);
  //printf("Dt=%e Rt=%e  Rt/Dt=%f   xz=%f\n",Dt,Rt,Rt/Dt,xz);
 }
 
@@ -420,9 +483,33 @@ CPWindow4::spind7_EvOnChangeSpinDouble(CControl * control)
 void
 CPWindow4::timer1_EvOnTime(CControl * control)
 {
+ static int count = 0;
+
  if (update)
   {
    update = 0;
+
+   count++;
+   if (count >= 5) //Update at 2Hz
+    {
+     count = 0;
+     if (togglebutton1.GetCheck ())
+      {
+       CalculateStats (0);
+      }
+     else
+      {
+       memset (&ch_status[0], 0, sizeof (ch_status_t));
+      }
+     if (togglebutton2.GetCheck ())
+      {
+       CalculateStats (1);
+      }
+     else
+      {
+       memset (&ch_status[1], 0, sizeof (ch_status_t));
+      }
+    }
    DrawScreen ();
    if (togglebutton6.GetCheck () && spind1.GetEnable ())
     togglebutton6_EvOnToggleButton (this);
@@ -464,6 +551,13 @@ CPWindow4::WritePreferences(void)
  Window1.saveprefs (lxT ("osc_tch"), combo1.GetText ());
  Window1.saveprefs (lxT ("osc_tlevel"), ftoa (spind7.GetValue ()));
  Window1.saveprefs (lxT ("osc_position"), itoa (GetX ()) + lxT (",") + itoa (GetY ()));
+
+ Window1.saveprefs (lxT ("osc_measures"),
+                    itoa (measures[0]) + lxT (",") +
+                    itoa (measures[1]) + lxT (",") +
+                    itoa (measures[2]) + lxT (",") +
+                    itoa (measures[3]) + lxT (",") +
+                    itoa (measures[4]));
 }
 
 void
@@ -564,15 +658,32 @@ CPWindow4::ReadPreferences(char *name, char *value)
    SetX (i);
    SetY (j);
   }
+
+ if (!strcmp (name, "osc_measures"))
+  {
+   sscanf (value, "%i,%i,%i,%i,%i", &measures[0], &measures[1], &measures[2], &measures[3], &measures[4]);
+  }
 }
 
 void
-CPWindow4::_EvOnDestroy(CControl * control) { }
+CPWindow4::_EvOnDestroy(CControl * control)
+{
+ if (font)
+  {
+   delete font;
+   font = NULL;
+  }
+}
 
 void
 CPWindow4::_EvOnShow(CControl * control)
 {
  timer1.SetRunState (1);
+
+ if (!font)
+  {
+   font = new lxFont (9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD);
+  }
 }
 
 void
@@ -670,10 +781,8 @@ CPWindow4::togglebutton6_EvOnToggleButton(CControl * control)
 void
 CPWindow4::button4_EvMouseButtonClick(CControl * control, uint button, uint x, uint y, uint state)
 {
-
  filedialog1.SetType (lxFD_SAVE | lxFD_CHANGE_DIR);
  filedialog1.Run ();
-
 }
 
 void
@@ -688,11 +797,150 @@ CPWindow4::filedialog1_EvOnClose(int retId)
 void
 CPWindow4::colordialog1_EvOnClose(int retId)
 {
-
  if (retId)
   {
    ctrl->SetColor (colordialog1.GetColor ());
   }
 }
 
+void
+CPWindow4::CalculateStats(int channel)
+{
+
+ ch_status[channel].Vmax = -1000;
+ ch_status[channel].Vmin = 1000;
+ double sumSamples = 0;
+ double sumSquares = 0;
+ double val = -ch[channel][0];
+ int i = 1;
+ bool ltr_down = (val < ch_status[channel].Vavr); //last transition down
+ bool firstUp = true;
+ unsigned short ltrsHigh = 0; //last transition sample high number
+ unsigned short sumFCW = 0; //Full cycle width sum
+ unsigned short sumPCW = 0; //Positive semi-cycle width sum
+ unsigned short numFCycles = 0; //Number of full cycles
+ unsigned short numPCycles = 0; //Number of positive semi-cycles
+
+
+ for (i = 1; i < (NPOINTS / 2) - 1; i++)
+  {
+   val = -ch[channel][i];
+
+   if (ch_status[channel].Vmax < val)
+    ch_status[channel].Vmax = val;
+   if (ch_status[channel].Vmin > val)
+    ch_status[channel].Vmin = val;
+   sumSamples += val;
+   sumSquares += (val * val);
+
+   // find out frequency (using previous Vavr)
+   if (ltr_down && (val > ch_status[channel].Vavr)) // transition UP
+    {
+     if (!firstUp)
+      {
+       sumFCW += (i - 1 - ltrsHigh);
+       numFCycles++;
+      }
+     else
+      {
+       firstUp = false;
+      }
+     ltr_down = false;
+     ltrsHigh = i - 1;
+    }
+   else if (!ltr_down && (val < ch_status[channel].Vavr)) // transition Down
+    {
+     if (!firstUp)
+      {
+       sumPCW += (i - 1 - ltrsHigh);
+       numPCycles++;
+      }
+     ltr_down = true;
+    }
+  }
+
+ ch_status[channel].Vavr = sumSamples / (NPOINTS / 2); //Voltage average
+ ch_status[channel].Vrms = sqrt (sumSquares / (NPOINTS / 2));
+
+ double avgFCycleWidth = sumFCW * Rt / numFCycles;
+ double avgPCycleWidth = sumPCW * Rt / numPCycles;
+
+ int pulseValid = (numFCycles > 0) && (avgFCycleWidth != 0) && (avgPCycleWidth != 0) && ((ch_status[channel].Vmax - ch_status[channel].Vmin) > 0.2);
+
+ if (pulseValid)
+  {
+   ch_status[channel].PCycle_ms = avgPCycleWidth * 1000;
+   ch_status[channel].FCycle_ms = avgFCycleWidth * 1000;
+   ch_status[channel].Freq = 1.0 / avgFCycleWidth;
+   ch_status[channel].Duty = avgPCycleWidth * 100 / avgFCycleWidth;
+  }
+ else
+  {
+   ch_status[channel].PCycle_ms = -1;
+   ch_status[channel].FCycle_ms = -1;
+   ch_status[channel].Freq = -1;
+   ch_status[channel].Duty = -1;
+  }
+ /*
+ printf ("================\n");
+ printf ("avgPW %lf ms\n", ch_status[channel].PCycle_ms);
+ printf ("duty %lf %%\n", ch_status[channel].Duty);
+ printf ("freq %lf Hz\n", ch_status[channel].Freq);
+ printf ("cycle %lf ms\n", ch_status[channel].FCycle_ms);
+ printf ("Vrms %lf V\n", ch_status[channel].Vrms);
+ printf ("Vavr %lf V\n", ch_status[channel].Vavr);
+ printf ("Vmax %lf V\n", ch_status[channel].Vmax);
+ printf ("Vmin %lf V\n", ch_status[channel].Vmax);
+  */
+}
+
+void
+CPWindow4::button5_EvMouseButtonPress(CControl * control, const uint button, const uint x, const uint y, const uint state)
+{
+ measures[0]++;
+ if (measures[0] >= MAX_MEASURES)
+  {
+   measures[0] = 0;
+  }
+}
+
+void
+CPWindow4::button6_EvMouseButtonPress(CControl * control, const uint button, const uint x, const uint y, const uint state)
+{
+ measures[1]++;
+ if (measures[1] >= MAX_MEASURES)
+  {
+   measures[1] = 0;
+  }
+}
+
+void
+CPWindow4::button7_EvMouseButtonPress(CControl * control, const uint button, const uint x, const uint y, const uint state)
+{
+ measures[2]++;
+ if (measures[2] >= MAX_MEASURES)
+  {
+   measures[2] = 0;
+  }
+}
+
+void
+CPWindow4::button8_EvMouseButtonPress(CControl * control, const uint button, const uint x, const uint y, const uint state)
+{
+ measures[3]++;
+ if (measures[3] >= MAX_MEASURES)
+  {
+   measures[3] = 0;
+  }
+}
+
+void
+CPWindow4::button9_EvMouseButtonPress(CControl * control, const uint button, const uint x, const uint y, const uint state)
+{
+ measures[4]++;
+ if (measures[4] >= MAX_MEASURES)
+  {
+   measures[4] = 0;
+  }
+}
 

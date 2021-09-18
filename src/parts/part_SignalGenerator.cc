@@ -45,6 +45,7 @@ font(9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
 {
  X = x;
  Y = y;
+ aways_update = 1;
  ReadMaps ();
 
  lxImage image (&Window5);
@@ -250,7 +251,7 @@ cpart_SignalGenerator::Process(void)
      Window5.SetPin (input_pins[0], vald);
      Window5.SetPin (input_pins[1], vald);
     }
-   mcount = -1;
+   mcount = 1;
   }
 
 }
