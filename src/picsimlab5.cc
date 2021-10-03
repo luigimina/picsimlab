@@ -574,6 +574,26 @@ CPWindow5::LoadConfig(lxString fname)
       {
        sscanf (prefs.GetLine (i).c_str (), "%255[^,],%i,%i:%255[^\n]", name, &x, &y, temp);
       }
+
+     //typo fix
+     if (!strcmp (name, "Switchs"))
+      {
+       strcpy (name, "Switches");
+      }
+     else if (!strcmp (name, "IO Virtual term"))
+      {
+       strcpy (name, "IO Virtual Term");
+      }
+     else if (!strcmp (name, "Push buttons"))
+      {
+       strcpy (name, "Push Buttons");
+      }
+     else if (!strcmp (name, "Push buttons (Analogic)"))
+      {
+       strcpy (name, "Push Buttons (Analogic)");
+      }
+
+
      if (!strcmp (name, "scale"))
       {
        sscanf (temp, "%f", &scale);
@@ -874,7 +894,7 @@ CPWindow5::PreProcess(void)
  i2c_bus_count = 0;
  for (i = 0; i < PinsCount; i++)
   {
-   if (i2c_bus[i] > 1)//need register bus
+   if (i2c_bus[i] > 0)//need register bus
     {
      i2c_bus_ptr[i2c_bus_count] = i;
      i2c_bus_count++;
@@ -1181,14 +1201,7 @@ CPWindow5::Set_i2c_bus(unsigned char pin, unsigned char value)
 {
  if (pin < IOINIT)
   {
-   if (i2c_bus_count)
-    {
      i2c_bus[pin] |= value;
-    }
-   else
-    {
-     i2c_bus[pin] = value;
-    }
   }
 }
 

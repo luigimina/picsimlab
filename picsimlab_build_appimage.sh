@@ -1,13 +1,15 @@
-#!/bin/bash -x
+#!/bin/bash 
 . VERSION
 
-export VERSION=${VERSION}
+VERSION_="${VERSION}_${DATE}"
+
+export VERSION=${VERSION_}
 
 sudo apt-get -y install libminizip-dev
 install -d build_all
 cd build_all
 git clone https://github.com/lcgamboa/lxrad_nogui.git
-echo -e "\033[1;32m ---------------------- build and install lxrad nogui -------------------------- \033[0m"
+echo -e "\033[1;32m ---------------------- build lxrad nogui -------------------------- \033[0m"
 cd lxrad_nogui
 git pull
 make clean;make -j4
@@ -16,9 +18,10 @@ cd ..
 cd ..
 
 rm -rf AppDir
+echo -e "\033[1;32m ---------------------- build picsimlab -------------------------- \033[0m"
 make clean
-make -j4 $1
-make DESTDIR=`pwd`/AppDir install_app
+make -j4 LIBPATH="../build_all/" FILE=Makefile.static $1
+make LIBPATH="../build_all/" FILE=Makefile.static DESTDIR=`pwd`/AppDir install_app
 rm -rf AppDir/usr/share/picsimlab/docs/
 #cp /usr/bin/cutecom AppDir/usr/bin
 cp /usr/bin/gtkwave AppDir/usr/bin
@@ -31,7 +34,7 @@ wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/lin
 chmod a+x linuxdeploy-x86_64.AppImage
 mv linuxdeploy-x86_64.AppImage /tmp/
 if [[ -n "$1" ]]; then
-  cp /usr/bin/qemu-stm32 AppDir/usr/bin
+  cp build_all/qemu_stm32/arm-softmmu/qemu-stm32 AppDir/usr/bin
   /tmp/linuxdeploy-x86_64.AppImage --appdir AppDir --executable=AppDir/usr/bin/qemu-stm32
 fi
 #/tmp/linuxdeploy-x86_64.AppImage --appdir AppDir --executable=AppDir/usr/bin/cutecom
@@ -57,16 +60,17 @@ rm -rf AppDir
 
 cd src
 rm -rf AppDir
+echo -e "\033[1;32m ---------------------- build picsimlab nogui -------------------------- \033[0m"
 make clean
-make -f Makefile.NOGUI -j4 $1
-make -f Makefile.NOGUI DESTDIR=AppDir install
+make -j4 LIBPATH="../build_all/" -f Makefile.NOGUI $1
+make LIBPATH="../build_all/" -f Makefile.NOGUI DESTDIR=AppDir install
 rm -rf AppDir/usr/share/picsimlab/docs/
 cd AppDir/usr/share/picsimlab 
 find . -type f -name '*.png' -exec rm {} +
 find . -type f -name '*.xcf' -exec rm {} +
 cd -
 if [[ -n "$1" ]]; then
-  cp /usr/bin/qemu-stm32 AppDir/usr/bin
+  cp build_all/qemu_stm32/arm-softmmu/qemu-stm32 AppDir/usr/bin
   /tmp/linuxdeploy-x86_64.AppImage --appdir AppDir --executable=AppDir/usr/bin/qemu-stm32
 fi
 /tmp/linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage

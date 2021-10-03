@@ -725,6 +725,7 @@ cboard_McLab2::Run_CPU(void)
      }
 
     if (!mplabxd_testbp ())pic_step ();
+    ioupdated = pic.ioupdated;
     if (use_oscope)Window4.SetSample ();
     if (use_spare)Window5.Process ();
 
@@ -738,13 +739,12 @@ cboard_McLab2::Run_CPU(void)
 
       for (pj = 18; pj < 30; pj++)
        {
-        pinv = pins[pi].value;
+        pinv = pins[pj].value;
         if ((pinv)&&(pins[39].value)) alm1[pj]++;
         if ((pinv)&&(pins[38].value)) alm2[pj]++;
         if ((pinv)&&(pins[37].value)) alm3[pj]++;
         if ((pinv)&&(pins[36].value)) alm4[pj]++;
        }
-
 
       j = -1;
      }
@@ -768,60 +768,62 @@ cboard_McLab2::Run_CPU(void)
     else
      pic_set_apin (3, vp2[0]);
 
-
-    //lcd dipins[2].dirsplay code
-    if ((!pins[8].dir)&&(!pins[8].value))
+    if (ioupdated)
      {
-      if (!lcde)
+      //lcd dipins[2].dirsplay code
+      if ((!pins[8].dir)&&(!pins[8].value))
        {
-        d = 0;
-        if (pins[29].value) d |= 0x80;
-        if (pins[28].value) d |= 0x40;
-        if (pins[27].value) d |= 0x20;
-        if (pins[26].value) d |= 0x10;
-        if (pins[21].value) d |= 0x08;
-        if (pins[20].value) d |= 0x04;
-        if (pins[19].value) d |= 0x02;
-        if (pins[18].value) d |= 0x01;
+        if (!lcde)
+         {
+          d = 0;
+          if (pins[29].value) d |= 0x80;
+          if (pins[28].value) d |= 0x40;
+          if (pins[27].value) d |= 0x20;
+          if (pins[26].value) d |= 0x10;
+          if (pins[21].value) d |= 0x08;
+          if (pins[20].value) d |= 0x04;
+          if (pins[19].value) d |= 0x02;
+          if (pins[18].value) d |= 0x01;
 
-        if ((!pins[7].dir)&&(!pins[7].value))
-         {
-          lcd_cmd (&lcd, d);
+          if ((!pins[7].dir)&&(!pins[7].value))
+           {
+            lcd_cmd (&lcd, d);
+           }
+          else if ((!pins[7].dir)&&(pins[7].value))
+           {
+            lcd_data (&lcd, d);
+           }
+          lcde = 1;
          }
-        else if ((!pins[7].dir)&&(pins[7].value))
-         {
-          lcd_data (&lcd, d);
-         }
-        lcde = 1;
+
+       }
+      else
+       {
+        lcde = 0;
        }
 
-     }
-    else
-     {
-      lcde = 0;
-     }
+      //i2c code
+      if (pins[22].dir)
+       {
+        sda = 1;
+       }
+      else
+       {
+        sda = pins[22].value;
+       }
 
-    //i2c code
-    if (pins[22].dir)
-     {
-      sda = 1;
+      if (pins[17].dir)
+       {
+        sck = 1;
+        pic_set_pin (18, 1);
+       }
+      else
+       {
+        sck = pins[17].value;
+       }
+      pic_set_pin (23, mi2c_io (&mi2c, sck, sda));
      }
-    else
-     {
-      sda = pins[22].value;
-     }
-
-    if (pins[17].dir)
-     {
-      sck = 1;
-      pic_set_pin (18, 1);
-     }
-    else
-     {
-      sck = pins[17].value;
-     }
-    pic_set_pin (23, mi2c_io (&mi2c, sck, sda));
-
+    pic.ioupdated = 0;
    }
  //fim STEP
 
