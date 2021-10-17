@@ -1,21 +1,9 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.194.3/containers/cpp/.devcontainer/base.Dockerfile
+# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.202.3/containers/cpp/.devcontainer/base.Dockerfile
 
-# [Choice] Debian / Ubuntu version: debian-11, debian-10, debian-9, ubuntu-20.04, ubuntu-18.04
-ARG VARIANT="buster"
+# [Choice] Debian / Ubuntu version (use Debian 11/9, Ubuntu 18.04/21.04 on local arm64/Apple Silicon): debian-11, debian-10, debian-9, ubuntu-21.04, ubuntu-20.04, ubuntu-18.04
+ARG VARIANT="bullseye"
 FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 
 # [Optional] Uncomment this section to install additional packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
-COPY library-scripts/desktop-lite-debian.sh /tmp/library-scripts/
-RUN apt-get update && bash /tmp/library-scripts/desktop-lite-debian.sh
-ENV DBUS_SESSION_BUS_ADDRESS="autolaunch:" \
-    VNC_RESOLUTION="1440x768x16" \
-    VNC_DPI="96" \
-    VNC_PORT="5901" \
-    NOVNC_PORT="6080" \
-    DISPLAY=":1" \
-    LANG="en_US.UTF-8" \
-    LANGUAGE="en_US.UTF-8"
-ENTRYPOINT ["/usr/local/share/desktop-init.sh"]
-CMD ["sleep", "infinity"]
