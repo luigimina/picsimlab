@@ -4,7 +4,8 @@ CXX= g++
 
 PKG_CONFIG= `pkg-config --cflags glib-2.0` 
 
-prefix=$(DESTDIR)/usr
+DESTDIR ?= /usr
+prefix = $(DESTDIR)
 
 RM= rm -f
 CP= cp
@@ -22,7 +23,7 @@ override CXXFLAGS+= -DEXT_BROWSER
 #override CXXFLAGS+=-fsanitize=address
 #override CXXFLAGS+=-fno-omit-frame-pointer
 
-LIBS =  `lxrad-config --libs` -lpicsim -lsimavr -lelf $(ELIBS)
+LIBS =  `lxrad-config --libs` -lpicsim -lsimavr -lelf -lucsim $(ELIBS)
 #LIBS=  ../../picsim/src/libpicsim_dbg.a ../../LXRAD_WX/libteste/liblxrad.a  ../../lunasvg/build/liblunasvg.a \
      ../../simavr/simavr/obj-x86_64-linux-gnu/libsimavr.a  -lopenal `wx-config --libs` `wx-config --libs stc` $(ELIBS)
 
@@ -42,8 +43,8 @@ picsimlab: $(OBJS)
 	@$(CXX) -c $(CXXFLAGS) $< -o $@ 
 
 install: all
-	${MKDIR} ${sharedir}
-	${MKDIR} ${sharedir}docs/
+	install -d $(execdir) $(sharedir) $(appdir) ${sharedir}/../icons/hicolor/64x64/apps/ \
+	${sharedir}/../icons/hicolor/64x64/mimetypes/ ${sharedir}/../mime/application/
 	$(CP) -dvf  ../share/picsimlab.desktop ${appdir} 
 	$(CP) -drvf ../share/* ${sharedir}
 	$(CP) -dvf picsimlab ${execdir}
@@ -61,7 +62,6 @@ install_app: all
 	$(CP) -dvf  ../share/picsimlab.desktop ${appdir}/
 	$(CP) -drvf ../share/* ${sharedir} 
 	$(CP) -dvf picsimlab ${execdir}
-	strip ${execdir}picsimlab
 	$(CP) -drvf ../share/picsimlab.png ${sharedir}/../icons/hicolor/64x64/apps/
 	$(CP) -drvf ../share/application-x-picsimlab-workspace.png  ${sharedir}/../icons/hicolor/64x64/mimetypes/
 	$(CP) -drvf ../share/application-x-picsimlab-workspace.xml ${sharedir}/../mime/application/x-picsimlab-workspace.xml

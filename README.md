@@ -23,9 +23,9 @@ The [experimental version boards](https://lcgamboa.github.io/picsimlab_docs/stab
 in addition to the stable ones.
 
 
-![PICsimLab](https://lcgamboa.github.io/picsimlab_docs/stable/img/screenshot.png "PICsimLab")
+![PICsimLab](https://lcgamboa.github.io/picsimlab_docs/gifs/analog.gif "PICsimLab")
 
-![PICsimLab](https://lcgamboa.github.io/picsimlab_docs/stable/img/picsimlab4.png "PICsimLab")
+![PICsimLab](https://lcgamboa.github.io/picsimlab_docs/gifs/main.gif "PICsimLab")
 
 ## More info
 
@@ -84,7 +84,7 @@ cd picsimlab
 
 To recompile use:
 ```
-make -j4
+make -j$(nproc)
 ```
 
 ### Cross-compiling for Windows (from Linux or [WSL](https://docs.microsoft.com/windows/wsl/install-win10) on win10)
@@ -98,7 +98,7 @@ cd picsimlab
 ```
 To recompile use:
 ```
-make FILE=Makefile.cross -j4 
+make FILE=Makefile.cross -j$(nproc) 
 ```
 
 For target Windows 32 bits:
@@ -110,7 +110,7 @@ cd picsimlab
 ```
 To recompile use:
 ```
-make FILE=Makefile.cross_32 -j4 
+make FILE=Makefile.cross_32 -j$(nproc) 
 ```
 
 ### Experimental version
@@ -123,9 +123,9 @@ Experimental version can be built using the parameter "exp" on scripts:
 ```
 And recompiled using the parameter "exp" on Makefiles:
 ```
-make -j4 exp
-make FILE=Makefile.cross -j4  exp
-make FILE=Makefile.cross_32 -j4 exp
+make -j$(nproc) exp
+make FILE=Makefile.cross -j$(nproc)  exp
+make FILE=Makefile.cross_32 -j$(nproc) exp
 ```
 
 ### macOS from source

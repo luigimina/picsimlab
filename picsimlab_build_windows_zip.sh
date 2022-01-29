@@ -19,9 +19,9 @@ fi
 
 #compila windows 32 e 64 bits
 make clean
-make CXX="ccache x86_64-w64-mingw32-g++" FILE=Makefile.cross -j4 ${TARGET}
+make CXX="ccache x86_64-w64-mingw32-g++" FILE=Makefile.cross -j$(nproc) ${TARGET}
 make clean
-make CXX="ccache i686-w64-mingw32-g++" FILE=Makefile.cross_32 -j4 ${TARGET}
+make CXX="ccache i686-w64-mingw32-g++" FILE=Makefile.cross_32 -j$(nproc) ${TARGET}
 make clean
 cd ..
 rm -Rf picsimlab_win32/share/ 
@@ -52,7 +52,7 @@ rm -Rf picsimlab_win64/libintl-8.dll
 rm -Rf picsimlab_win64/libssp-0.dll
 rm -Rf picsimlab_win64/libwinpthread-1.dll
 #rm -Rf picsimlab_win64/zlib1.dll
-rm -Rf picsimlab_win64/ucsim.dll
+#rm -Rf picsimlab_win64/ucsim.dll
 rm -Rf picsimlab_win64/libgpsim-0.dll
 rm -Rf picsimlab_win32/qemu-stm32.exe
 rm -Rf picsimlab_win32/libglib-2.0-0.dll
@@ -62,7 +62,7 @@ rm -Rf picsimlab_win32/libintl-8.dll
 rm -Rf picsimlab_win32/libssp-0.dll
 rm -Rf picsimlab_win32/libwinpthread-1.dll
 #rm -Rf picsimlab_win32/zlib1.dll
-rm -Rf picsimlab_win32/ucsim.dll
+#rm -Rf picsimlab_win32/ucsim.dll
 rm -Rf picsimlab_win32/libgpsim-0.dll
 else
 cp -d exp_w64/bin/* picsimlab_win64/ 

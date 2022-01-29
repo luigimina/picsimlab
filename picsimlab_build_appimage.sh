@@ -12,7 +12,7 @@ git clone https://github.com/lcgamboa/lxrad_nogui.git
 echo -e "\033[1;32m ---------------------- build lxrad nogui -------------------------- \033[0m"
 cd lxrad_nogui
 git pull
-make clean;make -j4
+make clean;make -j$(nproc)
 sudo make install
 cd ..
 cd ..
@@ -20,7 +20,7 @@ cd ..
 rm -rf AppDir
 echo -e "\033[1;32m ---------------------- build picsimlab -------------------------- \033[0m"
 make clean
-make -j4 LIBPATH="../build_all/" FILE=Makefile.static $1
+make -j$(nproc) LIBPATH="../build_all/" FILE=Makefile.static $1
 make LIBPATH="../build_all/" FILE=Makefile.static DESTDIR=`pwd`/AppDir install_app
 rm -rf AppDir/usr/share/picsimlab/docs/
 #cp /usr/bin/cutecom AppDir/usr/bin
@@ -51,6 +51,17 @@ echo "\$APPDIR/usr/bin/picsimlab \$@" >> /tmp/AppRun
 chmod a+x /tmp/AppRun
 /tmp/linuxdeploy-x86_64.AppImage --custom-apprun=/tmp/AppRun --appdir AppDir --output appimage
 install -d "release_${VERSION}"
+#remove libgmodule
+wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+chmod +x appimagetool-x86_64.AppImage
+mv appimagetool-x86_64.AppImage /tmp/
+./PICSimLab-${VERSION}-x86_64.AppImage --appimage-extract
+rm -rf squashfs-root/usr/lib/libgmodule*
+rm -rf squashfs-root/usr/lib/libgdk_pixbuf*
+/tmp/appimagetool-x86_64.AppImage -v squashfs-root
+rm -rf squashfs-root/
+#rename package
+mv PICSimLab-x86_64.AppImage PICSimLab-${VERSION}-x86_64.AppImage 
 if [[ -n "$1" ]]; then
   mv -f PICSimLab-${VERSION}-x86_64.AppImage release_${VERSION}/PICSimLab-${VERSION}_experimetal-x86_64.AppImage 
 else
@@ -62,7 +73,7 @@ cd src
 rm -rf AppDir
 echo -e "\033[1;32m ---------------------- build picsimlab nogui -------------------------- \033[0m"
 make clean
-make -j4 LIBPATH="../build_all/" -f Makefile.NOGUI $1
+make -j$(nproc) LIBPATH="../build_all/" -f Makefile.NOGUI $1
 make LIBPATH="../build_all/" -f Makefile.NOGUI DESTDIR=AppDir install
 rm -rf AppDir/usr/share/picsimlab/docs/
 cd AppDir/usr/share/picsimlab 

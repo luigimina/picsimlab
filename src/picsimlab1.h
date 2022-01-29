@@ -63,6 +63,10 @@ extern char SERIALDEVICE[100];
 #include "boards/board.h"
 #include "boards/boards_defs.h"
 
+enum {
+    CPU_RUNNING, CPU_STEPPING, CPU_HALTED, CPU_BREAKPOINT, CPU_ERROR, CPU_POWER_OFF
+};
+
 /**
  * @brief CPWindow1 class
  *
@@ -149,8 +153,9 @@ public:
     /*#Others*/
     //lxrad automatic generated block end, don't edit above!
 
-    CThread thread1;
-    CThread thread2;
+    CThread thread1;//main simulation
+    CThread thread2;//rcontrol
+    CThread thread3;//boards
     int tgo;
 
     int settodestroy;
@@ -167,6 +172,7 @@ public:
     void board_Event(CControl * control); 
     void thread1_EvThreadRun(CControl * control);
     void thread2_EvThreadRun(CControl * control);
+    void thread3_EvThreadRun(CControl * control);
 
     /**
      * @brief  Get the file path of resources
@@ -216,13 +222,6 @@ public:
     };
 
     /**
-     * @brief  Return the run status of microcontroller Running/Stopped
-     */
-    int Get_mcurun(void) {
-        return mcurun;
-    };
-
-    /**
      * @brief  Retunr if microcontroller reset pin is enabled
      */
     int Get_mcurst(void) {
@@ -238,14 +237,12 @@ public:
      */
     void Set_mcupwr(int pp) {
         mcupwr = pp;
+        if(mcupwr)
+          SetCpuState (CPU_RUNNING);
+        else
+          SetCpuState (CPU_POWER_OFF);  
     };
 
-    /**
-     * @brief  Set the run status of microcontroller Running/Stopped
-     */
-    void Set_mcurun(int pr) {
-        mcurun = pr;
-    };
 
     void Set_mcurst(int pr) {
         mcurst = pr;
@@ -297,7 +294,7 @@ public:
      */
     board * GetBoard(void);
 
-    void SetCpuState(unsigned char cs);
+    void SetCpuState(const unsigned char cs);
     void menu1_EvBoard(CControl * control);
     void menu1_EvMicrocontroller(CControl * control);
     void LoadWorkspace(lxString fnpzw);
@@ -305,13 +302,14 @@ public:
     int LoadHexFile(lxString fname);
     void SetClock(float clk);
     float GetClock(void);
-    void EndSimulation(void);
+    void EndSimulation(int saveold = 0);
     void RegisterError(const lxString error);
     void SetSync(unsigned char s){sync=s;};
     unsigned char GetSync(void){return sync;};
     void SetSimulationRun(int run);
     int GetSimulationRun(void);
     void DrawBoard(void);
+    double GetIdleMs(void);
 #ifndef _NOTHREAD    
     lxCondition * cpu_cond;
     lxMutex * cpu_mutex;
@@ -361,6 +359,8 @@ private:
     
     int need_resize;
     
+    double idle_ms; 
+    
     lxStringList Errors;
     lxString pzw_ver;
     
@@ -369,13 +369,10 @@ private:
     CItemMenu MBoard[BOARDS_MAX];
     CItemMenu MMicro[MAX_MIC];
 
+    lxString Workspacefn;
 };
 
 extern CPWindow1 Window1;
-
-enum {
-    CPU_RUNNING, CPU_STEPPING, CPU_HALTED, CPU_BREAKPOINT, CPU_ERROR
-};
 
 #define ST_T1 0x01
 #define ST_T2 0x02

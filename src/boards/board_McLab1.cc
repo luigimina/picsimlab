@@ -683,23 +683,17 @@ cboard_McLab1::EvMouseButtonPress(uint button, uint x, uint y, uint state)
        {
         if (Window1.Get_mcupwr ())
          {
-          Window1.Set_mcurun (0);
           Window1.Set_mcupwr (0);
           Reset ();
-
           p_BT[0] = 1;
           p_BT[1] = 1;
           p_BT[2] = 1;
           p_BT[3] = 1;
-          Window1.statusbar1.SetField (0, lxT ("Stoped"));
          }
         else
          {
           Window1.Set_mcupwr (1);
-          Window1.Set_mcurun (1);
           Reset ();
-
-          Window1.statusbar1.SetField (0, lxT ("Running..."));
          }
        }
        break;

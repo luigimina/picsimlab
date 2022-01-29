@@ -28,7 +28,7 @@
 #include"../picsimlab1.h"
 #include"../picsimlab4.h" //Oscilloscope
 #include"../picsimlab5.h" //Spare Parts
-#include"exp_board_uCboard.h"
+#include"board_uCboard.h"
 
 #ifndef _WIN_
 #define INVALID_HANDLE_VALUE -1;
@@ -186,18 +186,15 @@ cboard_uCboard::EvMouseButtonPress(uint button, uint x, uint y, uint state)
       case I_PWR:
        if (Window1.Get_mcupwr ()) //if on turn off
         {
-         Window1.Set_mcurun (0);
          Window1.Set_mcupwr (0);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Stoped"));
         }
        else //if off turn on
         {
          Window1.Set_mcupwr (1);
-         Window1.Set_mcurun (1);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Running..."));
         }
+       output_ids[O_LPWR]->update = 1;
        break;
        //if event is over I_RST area then turn off and reset
       case I_RST:
@@ -209,6 +206,7 @@ cboard_uCboard::EvMouseButtonPress(uint button, uint x, uint y, uint state)
         }
         */
        MReset (-1);
+       output_ids[O_RST]->update = 1;
        p_RST = 0;
        break;
       }
@@ -246,6 +244,7 @@ cboard_uCboard::EvMouseButtonRelease(uint button, uint x, uint y, uint state)
           */
         }
        p_RST = 1;
+       output_ids[O_RST]->update = 1;
        break;
       }
     }
@@ -263,62 +262,74 @@ cboard_uCboard::Draw(CDraw *draw)
  int i;
  lxRect rec;
  lxSize ps;
+ int update = 0; //verifiy if updated is needed
 
- font.SetPointSize ((MGetPinCount () >= 100) ? 9 : ((MGetPinCount () > 14) ? 12 : 10));
 
- draw->Canvas.Init (Scale, Scale); //initialize draw context
 
- //board_x draw 
+ //board_0 draw 
  for (i = 0; i < outputc; i++) //run over all outputs
   {
-   if (!output[i].r)//if output shape is a rectangle
+   if (output[i].update)//only if need update
     {
+     output[i].update = 0;
 
-     draw->Canvas.SetFgColor (0, 0, 0); //black
-
-     switch (output[i].id)//search for color of output
+     if (!update)
       {
-      case O_LPWR: //Blue using mcupwr value
-       draw->Canvas.SetColor (200 * Window1.Get_mcupwr () + 55, 0, 0);
-       draw->Canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
-       break;
-      case O_MP:
+       draw->Canvas.Init (Scale, Scale);
+      }
+     update++; //set to update buffer
 
-       draw->Canvas.SetFont (font);
+     if (!output[i].r)//if output shape is a rectangle
+      {
 
-       ps = micbmp->GetSize ();
-       draw->Canvas.ChangeScale (1.0, 1.0);
-       draw->Canvas.PutBitmap (micbmp, output[i].x1*Scale, output[i].y1 * Scale);
-       draw->Canvas.ChangeScale (Scale, Scale);
-       draw->Canvas.SetFgColor (230, 230, 230);
+       draw->Canvas.SetFgColor (0, 0, 0); //black
 
-       rec.x = output[i].x1;
-       rec.y = output[i].y1;
-       rec.width = ps.GetWidth () / Scale;
-       rec.height = ps.GetHeight () / Scale;
-       draw->Canvas.TextOnRect (Proc, rec, lxALIGN_CENTER | lxALIGN_CENTER_VERTICAL);
-       break;
-      case O_RST:
-       draw->Canvas.SetColor (100, 100, 100);
-       draw->Canvas.Circle (1, output[i].cx, output[i].cy, 11);
-       if (p_RST)
+       switch (output[i].id)//search for color of output
         {
-         draw->Canvas.SetColor (15, 15, 15);
+        case O_LPWR: //Blue using mcupwr value
+         draw->Canvas.SetColor (200 * Window1.Get_mcupwr () + 55, 0, 0);
+         draw->Canvas.Rectangle (1, output[i].x1, output[i].y1, output[i].x2 - output[i].x1, output[i].y2 - output[i].y1);
+         break;
+        case O_MP:
+         font.SetPointSize ((MGetPinCount () >= 100) ? 9 : ((MGetPinCount () > 14) ? 12 : 10));
+         draw->Canvas.SetFont (font);
+
+         ps = micbmp->GetSize ();
+         draw->Canvas.ChangeScale (1.0, 1.0);
+         draw->Canvas.PutBitmap (micbmp, output[i].x1*Scale, output[i].y1 * Scale);
+         draw->Canvas.ChangeScale (Scale, Scale);
+         draw->Canvas.SetFgColor (230, 230, 230);
+
+         rec.x = output[i].x1;
+         rec.y = output[i].y1;
+         rec.width = ps.GetWidth () / Scale;
+         rec.height = ps.GetHeight () / Scale;
+         draw->Canvas.TextOnRect (Proc, rec, lxALIGN_CENTER | lxALIGN_CENTER_VERTICAL);
+         break;
+        case O_RST:
+         draw->Canvas.SetColor (100, 100, 100);
+         draw->Canvas.Circle (1, output[i].cx, output[i].cy, 11);
+         if (p_RST)
+          {
+           draw->Canvas.SetColor (15, 15, 15);
+          }
+         else
+          {
+           draw->Canvas.SetColor (55, 55, 55);
+          }
+         draw->Canvas.Circle (1, output[i].cx, output[i].cy, 9);
+         break;
         }
-       else
-        {
-         draw->Canvas.SetColor (55, 55, 55);
-        }
-       draw->Canvas.Circle (1, output[i].cx, output[i].cy, 9);
-       break;
       }
     }
-
   }
 
  //end draw
- draw->Canvas.End ();
- draw->Update ();
+ if (update)
+  {
+   draw->Canvas.End ();
+   draw->Update ();
+  }
 
 }
 
@@ -332,6 +343,7 @@ cboard_uCboard::Run_CPU(void)
  const int pinc = MGetPinCount ();
 
  //const int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
+ //FIXME NSTEP must be multiplied for 4
  const long int NSTEP = Window1.GetNSTEP (); //number of steps in 100ms
  const float RNSTEP = 200.0 * pinc / NSTEP;
 

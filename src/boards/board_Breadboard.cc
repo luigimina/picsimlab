@@ -62,7 +62,6 @@ cboard_Breadboard::get_in_id(char * name)
 unsigned short
 cboard_Breadboard::get_out_id(char * name)
 {
-
  if (strcmp (name, "LD_LPWR") == 0)return O_LPWR;
  if (strcmp (name, "IC_CPU") == 0)return O_MP;
  if (strcmp (name, "PB_RST") == 0)return O_RST;
@@ -183,29 +182,42 @@ cboard_Breadboard::RefreshStatus(void)
     Window1.statusbar1.SetField (2, lxT ("Serial: ") +
                                  lxString::FromAscii (SERIALDEVICE) + lxT (" (ERROR)"));
 
-   if (avr)
+   if (Window1.Get_mcupwr ())
     {
-     switch (avr->state)
+     if (avr)
       {
-      case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
-       break;
-      case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
-       break;
-      case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
-       break;
-      case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
-       break;
-      case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
-       break;
-      case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
-       break;
-      case cpu_Done: Window1.SetCpuState (CPU_HALTED);
-       break;
-      case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
+       switch (avr->state)
+        {
+        case cpu_Limbo: Window1.SetCpuState (CPU_ERROR);
+         break;
+        case cpu_Stopped: Window1.SetCpuState (CPU_HALTED);
+         break;
+        case cpu_Running: Window1.SetCpuState (CPU_RUNNING);
+         break;
+        case cpu_Sleeping: Window1.SetCpuState (CPU_HALTED);
+         break;
+        case cpu_Step: Window1.SetCpuState (CPU_STEPPING);
+         break;
+        case cpu_StepDone: Window1.SetCpuState (CPU_STEPPING);
+         break;
+        case cpu_Done: Window1.SetCpuState (CPU_HALTED);
+         break;
+        case cpu_Crashed: Window1.SetCpuState (CPU_ERROR);
+         break;
+        }
        break;
       }
-     break;
+     else
+      {
+       Window1.SetCpuState (CPU_ERROR);
+      }
     }
+   else
+    {
+     Window1.SetCpuState (CPU_POWER_OFF);
+    }
+
+
   }
 
 }
@@ -272,17 +284,13 @@ cboard_Breadboard::EvMouseButtonPress(uint button, uint x, uint y, uint state)
       case I_PWR:
        if (Window1.Get_mcupwr ()) //if on turn off
         {
-         Window1.Set_mcurun (0);
          Window1.Set_mcupwr (0);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Stoped"));
         }
        else //if off turn on
         {
          Window1.Set_mcupwr (1);
-         Window1.Set_mcurun (1);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Running..."));
         }
        output_ids[O_LPWR]->update = 1;
        break;
@@ -447,9 +455,9 @@ cboard_Breadboard::Run_CPU(void)
        //verify if a breakpoint is reached if not run one instruction 
        if (!mplabxd_testbp ())pic_step ();
        ioupdated = pic.ioupdated;
-       
+
        if (use_oscope)Window4.SetSample ();
-       if (use_spare)Window5.Process (); 
+       if (use_spare)Window5.Process ();
 
        //increment mean value counter if pin is high
        alm[pi] += pins[pi].value;
@@ -520,7 +528,7 @@ cboard_Breadboard::Run_CPU(void)
        if (use_oscope)Window4.SetSample ();
        if (use_spare)Window5.Process ();
        ioupdated = 0;
-       
+
        //increment mean value counter if pin is high
        alm[pi] += pins[pi].value;
        pi++;

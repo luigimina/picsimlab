@@ -203,17 +203,13 @@ cboard_STM32_H103::EvMouseButtonPress(uint button, uint x, uint y, uint state)
       case I_PWR:
        if (Window1.Get_mcupwr ()) //if on turn off
         {
-         Window1.Set_mcurun (0);
          Window1.Set_mcupwr (0);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Stoped"));
         }
        else //if off turn on
         {
          Window1.Set_mcupwr (1);
-         Window1.Set_mcurun (1);
          Reset ();
-         Window1.statusbar1.SetField (0, lxT ("Running..."));
         }
        break;
        //if event is over I_RST area then turn off and reset
@@ -354,8 +350,8 @@ cboard_STM32_H103::Run_CPU(void)
  unsigned int alm[64];
  const int pinc = MGetPinCount ();
 
- const int JUMPSTEPS = Window1.GetJUMPSTEPS (); //number of steps skipped
- const long int NSTEP = Window1.GetNSTEP (); //number of steps in 100ms
+ const int JUMPSTEPS = 4.0 * Window1.GetJUMPSTEPS (); //number of steps skipped
+ const long int NSTEP = 4.0 * Window1.GetNSTEP (); //number of steps in 100ms
  const float RNSTEP = 200.0 * pinc / NSTEP;
 
  //reset pins mean value
