@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2020-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2020-2022  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -42,13 +42,7 @@ font(8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image (&Window5);
-
- image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
-
- Bitmap = new lxBitmap (&image, &Window5);
- image.Destroy ();
- canvas.Create (Window5.GetWWidget (), Bitmap);
+ LoadImage();
 
  lcd_ssd1306_init (&lcd);
  lcd_ssd1306_rst (&lcd);
@@ -311,16 +305,9 @@ cpart_LCD_ssd1306::PostProcess(void)
 }
 
 void
-cpart_LCD_ssd1306::SetOrientation(int _orientation)
+cpart_LCD_ssd1306::LoadImage(void)
 {
- part::SetOrientation (_orientation);
- lcd_ssd1306_update (&lcd);
-}
-
-void
-cpart_LCD_ssd1306::SetScale(double scale)
-{
- part::SetScale (scale);
+ part::LoadImage();
  lcd_ssd1306_update (&lcd);
 }
 

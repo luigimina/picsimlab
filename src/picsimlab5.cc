@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2010-2022  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -160,17 +160,12 @@ CPWindow5::AddPart(const char * partname, const int x, const int y)
 
  if (parts[partsc] == NULL)
   {
-   Message (lxT ("Erro creating part: ") + lxString (partname));
+   Message_sz (lxT ("Erro creating part: ") + lxString (partname), 400, 200);
   }
  else
   {
    parts[partsc]->SetId (partsc);
    parts[partsc]->SetScale (scale);
-   if (parts[partsc]->GetAwaysUpdate ())
-    {
-     parts_aup[partsc_aup] = parts[partsc];
-     partsc_aup++;
-    }
    partsc++;
   }
 
@@ -516,7 +511,6 @@ CPWindow5::LoadConfig(lxString fname)
  lxStringList prefs;
  int newformat = 0;
 
-
  pboard = Window1.GetBoard ();
 
  for (int i = 0; i < 256; i++)
@@ -615,11 +609,6 @@ CPWindow5::LoadConfig(lxString fname)
         {
          parts[partsc_]->SetOrientation (orient);
          parts[partsc_]->SetScale (scale);
-        }
-       if (parts[partsc_]->GetAwaysUpdate ())
-        {
-         parts_aup[partsc_aup_] = parts[partsc_];
-         partsc_aup_++;
         }
        partsc_++;
       }
@@ -734,7 +723,7 @@ CPWindow5::menu1_File_Newconfiguration_EvMenuActive(CControl * control)
  if (partsc > 0)
   {
 #ifndef __EMSCRIPTEN__
-   if (Dialog ("Save current configuration?"))
+   if (Dialog_sz ("Save current configuration?", 400, 200))
     {
      menu1_File_Saveconfiguration_EvMenuActive (control);
     }
@@ -838,7 +827,7 @@ CPWindow5::menu1_Edit_Editpinalias_EvMenuActive(CControl * control)
   }
  else
   {
-   Message ("Pin alias file don't exist!");
+   Message_sz ("Pin alias file don't exist!", 400, 200);
   }
 }
 
@@ -886,9 +875,16 @@ CPWindow5::PreProcess(void)
 
  memset (i2c_bus, 0, PinsCount);
 
+
+ partsc_aup = 0;
  for (i = 0; i < partsc; i++)
   {
    parts[i]->PreProcess ();
+   if (parts[i]->GetAwaysUpdate ())
+    {
+     parts_aup[partsc_aup] = parts[i];
+     partsc_aup++;
+    }
   }
 
  i2c_bus_count = 0;
@@ -908,13 +904,11 @@ CPWindow5::Process(void)
 {
  int i;
 
-
-
  if (ioupdated)
   {
    for (i = 0; i < i2c_bus_count; i++)
     {
-     i2c_bus[i2c_bus_ptr[i]] = 0;
+     i2c_bus[i2c_bus_ptr[i]] = 1;
     }
    for (i = 0; i < partsc; i++)
     {
@@ -996,20 +990,10 @@ CPWindow5::pmenu2_Rotate_EvMenuActive(CControl * control)
 void
 CPWindow5::pmenu2_Delete_EvMenuActive(CControl * control)
 {
- int PartSelected_aup = partsc_aup;
  int partsc_ = partsc;
- int partsc_aup_ = partsc_aup;
  partsc = 0; //disable process
- partsc_aup = 0;
-
- for (int i = 0; i < partsc_aup_; i++)
-  {
-   if (parts_aup[i] == parts[PartSelected])
-    {
-     PartSelected_aup = i;
-    }
-  }
-
+ partsc_aup = 0; 
+  
  delete parts[PartSelected];
 
  for (int i = PartSelected; i < partsc_ - 1; i++)
@@ -1018,17 +1002,7 @@ CPWindow5::pmenu2_Delete_EvMenuActive(CControl * control)
   }
  partsc_--;
 
- if (PartSelected_aup < partsc_aup_)
-  {
-   for (int i = PartSelected_aup; i < partsc_aup_ - 1; i++)
-    {
-     parts_aup[i] = parts_aup[i + 1];
-    }
-   partsc_aup_--;
-  }
-
  partsc = partsc_;
- partsc_aup = partsc_aup_;
 
  update_all = 1;
 }
@@ -1106,7 +1080,8 @@ CPWindow5::filedialog1_EvOnClose(int retId)
      if (lxFileExists (filedialog1.GetFileName ()))
       {
 
-       if (!Dialog (lxString ("Overwriting file: ") + basename (filedialog1.GetFileName ()) + "?"))
+       if (!Dialog_sz (lxString ("Overwriting file: ") + 
+            basename (filedialog1.GetFileName ()) + "?", 400, 200))
         return;
       }
      SaveConfig (filedialog1.GetFileName ());
@@ -1147,7 +1122,8 @@ CPWindow5::filedialog1_EvOnClose(int retId)
      if (lxFileExists (filedialog1.GetFileName ()))
       {
 
-       if (!Dialog (lxString ("Overwriting file: ") + basename (filedialog1.GetFileName ()) + "?"))
+       if (!Dialog_sz (lxString ("Overwriting file: ") + 
+             basename (filedialog1.GetFileName ()) + "?", 400, 200))
         return;
       }
      SavePinAlias (filedialog1.GetFileName ());
@@ -1192,7 +1168,7 @@ CPWindow5::Reset_i2c_bus(unsigned char pin)
 {
  if (pin < IOINIT)
   {
-   i2c_bus[pin]++; //count i2c devices inb bus
+   i2c_bus[pin]++; //count i2c devices in bus
   }
 }
 
@@ -1201,7 +1177,7 @@ CPWindow5::Set_i2c_bus(unsigned char pin, unsigned char value)
 {
  if (pin < IOINIT)
   {
-     i2c_bus[pin] |= value;
+     i2c_bus[pin] &= value;
   }
 }
 
@@ -1295,6 +1271,11 @@ CPWindow5::SetPin(unsigned char pin, unsigned char value)
 {
  if (pin)
   {
+   if ((pin > PinsCount))
+    {
+      Pins[pin - 1].lsvalue = value; //for open collector simulation
+    } 
+
    if ((Pins[pin - 1].dir) &&((Pins[pin - 1].value != value)))
     {
      if ((pin > PinsCount))
@@ -1348,6 +1329,7 @@ CPWindow5::WritePin(unsigned char pin, unsigned char value)
 {
  if (pin > PinsCount)
   {
+   Pins[pin - 1].lsvalue = value; //for open collector simulation 
    Pins[pin - 1].value = value;
   }
 }

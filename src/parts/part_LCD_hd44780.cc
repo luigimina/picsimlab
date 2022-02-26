@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2010-2022  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,42 +36,9 @@ enum
 };
 
 void
-cpart_LCD_hd44780::InitGraphics(void)
-{
- lxImage image (&Window5);
-
- switch (model)
-  {
-  case LCD16x2:
-   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
-   break;
-  case LCD16x4:
-   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName_ ()), Orientation, Scale, Scale);
-   break;
-  case LCD20x2:
-   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName__ ()), Orientation, Scale, Scale);
-   break;
-  case LCD20x4:
-   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName___ ()), Orientation, Scale, Scale);
-   break;
-  }
-
- if (Bitmap)delete Bitmap;
-
- Bitmap = new lxBitmap (&image, &Window5);
- canvas.Destroy ();
- canvas.Create (Window5.GetWWidget (), Bitmap);
- image.Destroy ();
- for (int i = 0; i < outputc; i++)
-  {
-   output[i].update = 1;
-  }
-}
-
-void
 cpart_LCD_hd44780::Reset(void)
 {
- InitGraphics ();
+ LoadImage ();
 
  switch (model)
   {
@@ -115,6 +82,7 @@ font(8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  input_pins[9] = 0;
  input_pins[10] = 0;
 
+ lcde = 0; 
 }
 
 cpart_LCD_hd44780::~cpart_LCD_hd44780(void)
@@ -439,19 +407,16 @@ cpart_LCD_hd44780::Process(void)
 {
  const picpin * ppins = Window5.GetPinsValues ();
 
-
- //lcd dipins[2].display code
-
-
- if ((input_pins[1] > 0) &&(!ppins[input_pins[1] - 1].value))
+ if (input_pins[1] > 0) //EN
   {
-   if (!lcde)
+   if(input_pins[10] > 0) //R/W
     {
-     if (input_pins[10] > 0)
-      {
-       if (!ppins[input_pins[10] - 1].value)
+     if (!ppins[input_pins[10] - 1].value)
+      { 
+       //Write   
+       if  (lcde && (!ppins[input_pins[1] - 1].value)) 
         {
-         //Write
+         //EN falling edge  
          unsigned char d = 0;
          if ((input_pins[9] > 0)&&(ppins[input_pins[9] - 1].value)) d |= 0x80;
          if ((input_pins[8] > 0)&&(ppins[input_pins[8] - 1].value)) d |= 0x40;
@@ -471,17 +436,22 @@ cpart_LCD_hd44780::Process(void)
            lcd_data (&lcd, d);
           }
         }
-       else //Read
+      }
+      else 
+      {
+        //Read
+        if  (!lcde && (ppins[input_pins[1] - 1].value)) 
         {
+         //EN rising edge  
          unsigned char val = 0;
          if (!ppins[input_pins[0] - 1].value)
-          {
-           val = lcd_read_busyf_acounter (&lcd);
-          }
-         else
-          {
-           val = lcd_read_data (&lcd);
-          }
+         {
+          val = lcd_read_busyf_acounter (&lcd);
+         }
+        else
+         {
+          val = lcd_read_data (&lcd);
+         }
 
          if (input_pins[9] > 0)Window5.SetPin (input_pins[9], (val & 0x80) > 0);
          if (input_pins[8] > 0)Window5.SetPin (input_pins[8], (val & 0x40) > 0);
@@ -493,14 +463,13 @@ cpart_LCD_hd44780::Process(void)
          if (input_pins[2] > 0)Window5.SetPin (input_pins[2], (val & 0x01) > 0);
         }
       }
-     lcde = 1;
     }
+    lcde = ppins[input_pins[1] - 1].value;
   }
  else
   {
    lcde = 0;
   }
- //end display code
 
 }
 
@@ -510,20 +479,38 @@ cpart_LCD_hd44780::PostProcess(void)
  if (lcd.update)output_ids[O_LCD]->update = 1;
 }
 
-void
-cpart_LCD_hd44780::SetOrientation(int _orientation)
+void 
+cpart_LCD_hd44780::LoadImage(void) 
 {
- part::SetOrientation (_orientation);
- InitGraphics ();
- lcd.update = 1;
-}
+ lxImage image (&Window5);
 
-void
-cpart_LCD_hd44780::SetScale(double scale)
-{
- part::SetScale (scale);
- InitGraphics ();
- lcd.update = 1;
+ switch (model)
+  {
+  case LCD16x2:
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
+   break;
+  case LCD16x4:
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName_ ()), Orientation, Scale, Scale);
+   break;
+  case LCD20x2:
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName__ ()), Orientation, Scale, Scale);
+   break;
+  case LCD20x4:
+   image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName___ ()), Orientation, Scale, Scale);
+   break;
+  }
+
+ Bitmap = new lxBitmap (&image, &Window5);
+ canvas.Destroy ();
+ canvas.Create (Window5.GetWWidget (), Bitmap);
+ image.Destroy ();
+
+ for (int i = 0; i < outputc; i++)
+  {
+   output[i].update = 1;
+  }
+  
+  lcd.update = 1;
 }
 
 part_init(PART_LCD_HD44780_Name, cpart_LCD_hd44780, "Output");
@@ -542,13 +529,13 @@ cpart_LCD_hd44780_i2c_create(unsigned int x, unsigned int y)
 
  //connect lcd to pcf
  lcd->input_pins[0] = pcf_pins[0];
+ lcd->input_pins[10] = pcf_pins[1];
  lcd->input_pins[1] = pcf_pins[2];
  lcd->input_pins[6] = pcf_pins[4];
  lcd->input_pins[7] = pcf_pins[5];
  lcd->input_pins[8] = pcf_pins[6];
  lcd->input_pins[9] = pcf_pins[7];
-
-
+      
  //find GND
  for (int i = 0; i < 255; i++)
   {
@@ -558,7 +545,6 @@ cpart_LCD_hd44780_i2c_create(unsigned int x, unsigned int y)
      lcd->input_pins[3] = i;
      lcd->input_pins[4] = i;
      lcd->input_pins[5] = i;
-     lcd->input_pins[10] = i;
      break;
     }
   }

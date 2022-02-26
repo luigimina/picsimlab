@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2010-2021  Luis Claudio Gamboa Lopes
+   Copyright (c) : 2010-2022  Luis Claudio Gamboa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -43,8 +43,6 @@ CPWindow1 Window1;
 #include"picsimlab5.h"
 
 #include"devices/rcontrol.h"
-
-
 
 #ifdef __EMSCRIPTEN__
 #include<emscripten.h>
@@ -937,6 +935,7 @@ CPWindow1::EndSimulation(int saveold)
  char home[1024];
  char fname[1280];
 
+#ifndef __EMSCRIPTEN__
  if (Workspacefn.length () > 0)
   {
    if (saveold)
@@ -952,6 +951,7 @@ CPWindow1::EndSimulation(int saveold)
     }
    Workspacefn = "";
   }
+#endif
 
  SetSimulationRun (1);
  Window4.Hide ();
@@ -1811,21 +1811,6 @@ CPWindow1::filedialog2_EvOnClose(int retId)
 void
 CPWindow1::menu1_Tools_SerialTerm_EvMenuActive(CControl * control)
 {
-#ifdef _WIN_
- lxExecute (share + lxT ("/../tools/cutecom/cutecom.exe"));
-#else
-#if !defined(USE_XDG_OPEN) && !defined(FLATPAK_TARGET)
- //using system binary
- lxExecute ("cutecom");
-
- if (!(lxFileExists (dirname (lxGetExecutablePath ()) + "/cutecom")
-       || lxFileExists ("/usr/bin/cutecom")
-       || lxFileExists ("/usr/local/bin/cutecom")))
-  {
-   printf ("cutecom não instalado\n");
-   Message_sz ("The cutecom application is not found!\n\nPlease install cutecom in your system!\n\n In Debian based distro use: sudo apt-get install cutecom", 500, 240);
-  }
-#else
  char stfname[1024];
  snprintf (stfname, 1024, "%s/open_w_cutecom_or_gtkterm.sterm", (const char *) lxGetTempDir ("PICSimLab").c_str ());
 
@@ -1836,14 +1821,13 @@ CPWindow1::menu1_Tools_SerialTerm_EvMenuActive(CControl * control)
    fout = fopen (stfname, "w");
    if (fout)
     {
-     int buff = 0x11223344;
-     fwrite (&buff, 4, 1, fout);
+     int buff = 0x11223344;//fake magic number
+     fwrite (&buff, 4, 1, fout); 
+     fprintf (fout,"To associate .sterm extension, open this file with one serial terminal (cutecom, gtkterm, ...)");
     }
    fclose (fout);
   }
  lxLaunchDefaultApplication (stfname);
-#endif
-#endif
 }
 
 void
@@ -2068,3 +2052,16 @@ extern "C"
  }
 #endif
 }
+
+#ifdef FAKESJLJ
+typedef unsigned _Unwind_Exception_Class __attribute__((__mode__(__DI__)));
+
+void __gxx_personality_sj0(int version,
+		      int actions,
+		      _Unwind_Exception_Class exception_class,
+		      void *ue_header,
+		      void *context)
+{
+  std::abort();
+}
+#endif

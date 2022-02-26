@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2019-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2019-2022  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -53,15 +53,7 @@ font(9, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image (&Window5);
-
- image.LoadFile (lxGetLocalFile(Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
-
-
- Bitmap = new lxBitmap (&image, &Window5);
- image.Destroy ();
- canvas.Create (Window5.GetWWidget (), Bitmap);
-
+ LoadImage();
 
  output_pins[0] = 0;
  output_pins[1] = 0;
@@ -547,12 +539,7 @@ cpart_VCD_Play::EvMouseButtonPress(uint button, uint x, uint y, uint state)
                 URL.revokeObjectURL (text);
        }, f_vcd_name);
 #else
-#ifdef _WIN_
-       lxExecute (Window1.GetSharePath () + lxT ("/../tools/gtkwave/bin/gtkwave.exe ") + f_vcd_name);
-#else
-       //lxExecute (dirname (lxGetExecutablePath ()) + lxString ("/gtkwave ") + f_vcd_name, lxEXEC_MAKE_GROUP_LEADER);
        lxLaunchDefaultApplication(f_vcd_name);
-#endif
 #endif
        break;
       }

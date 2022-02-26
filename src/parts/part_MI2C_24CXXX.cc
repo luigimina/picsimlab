@@ -4,7 +4,7 @@
 
    ########################################################################
 
-   Copyright (c) : 2019-2021  Luis Claudio Gambôa Lopes
+   Copyright (c) : 2019-2022  Luis Claudio Gambôa Lopes
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -64,13 +64,7 @@ font(8, lxFONTFAMILY_TELETYPE, lxFONTSTYLE_NORMAL, lxFONTWEIGHT_BOLD)
  ReadMaps ();
  Bitmap = NULL;
 
- lxImage image (&Window5);
-
- image.LoadFile (lxGetLocalFile (Window1.GetSharePath () + lxT ("parts/") + GetPictureFileName ()), Orientation, Scale, Scale);
-
- Bitmap = new lxBitmap (&image, &Window5);
- image.Destroy ();
- canvas.Create (Window5.GetWWidget (), Bitmap);
+ LoadImage();
 
  kbits = 4;
 
@@ -457,7 +451,8 @@ cpart_MI2C_24CXXX::filedialog_EvOnClose(int retId)
      if (lxFileExists (Window5.filedialog1.GetFileName ()))
       {
 
-       if (!Dialog (lxString ("Overwriting file: ") + basename (Window5.filedialog1.GetFileName ()) + "?"))
+       if (!Dialog_sz (lxString ("Overwriting file: ") + 
+            basename (Window5.filedialog1.GetFileName ()) + "?", 400, 200))
         return;
       }
 

@@ -2,6 +2,14 @@
 
 ### New
 
+* Bounce effect added to Switches part and boards McLab1, McLab2, X and PICGenios. [lcgamboa]
+
+* LCD HD44780 support to read in 4bits mode. [lcgamboa]
+
+* Support to RAM data write/read breakpoints for PIC16F/18F added. [lcgamboa]
+
+* Timer peripheral added to RIPES board. [lcgamboa]
+
 * Support to automatic save the last open workspace file (.pzw) [lcgamboa]
 
 * New spare part LDR. [lcgamboa]
@@ -26,6 +34,12 @@
 
 ### Changes
 
+* Use system default application to open the serial terminal. [lcgamboa]
+
+* Disable autosave workspace for online version. [lcgamboa]
+
+* IO PCF8574 I2C expander support to read pins added. [lcgamboa]
+
 * Debian changelog updated. [lcgamboa]
 
 * Use default application to open VCD files in VCDDump part. [lcgamboa]
@@ -45,6 +59,10 @@
 * Speed optimization to only process parts when io is updated (only simavr) [lcgamboa]
 
 ### Fix
+
+* Bitbang I2C ACK fixed for all I2C parts. [lcgamboa]
+
+* Issue with device 74xx595 serial ouptut fixed. [lcgamboa]
 
 * Fixes month writing issue in RTCs. [lcgamboa]
 
